@@ -1,7 +1,0 @@
-rag_venv/
-__pycache__/
-*.pyc
-.pytest_cache/
-.chroma/
-.env
-*.egg-info/
