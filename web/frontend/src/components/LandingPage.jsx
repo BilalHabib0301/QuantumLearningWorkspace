@@ -172,15 +172,22 @@ export default function LandingPage({ onNavigate = () => {} }) {
   return (
     <div className="landing">
       <nav className={`navbar ${scrolled ? "scrolled" : ""}`}>
-        <div className="logo">
-          <span className="logo-icon">🧠</span>
-          <span className="logo-text">StudyMind <span>AI</span></span>
-        </div>
-        <div className="nav-actions">
-          <button className="btn-ghost" onClick={() => onNavigate("login")}>Log in</button>
-          <button className="btn-cta" onClick={() => onNavigate("signup")}>Sign up</button>
-        </div>
-      </nav>
+  <div className="logo">
+    <span className="logo-icon">🧠</span>
+    <span className="logo-text">StudyMind <span>AI</span></span>
+  </div>
+  <div className="nav-links">
+    <a href="#features" onClick={(e) => {
+      e.preventDefault();
+      document.getElementById("features")?.scrollIntoView({ behavior: "smooth" });
+    }}>Features</a>
+    <a href="#" onClick={(e) => e.preventDefault()}>How it Works</a>
+  </div>
+  <div className="nav-actions">
+    <button className="btn-ghost" onClick={() => onNavigate("login")}>Log in</button>
+    <button className="btn-cta" onClick={() => onNavigate("signup")}>Sign up</button>
+  </div>
+</nav>
 
       <section className="hero">
         <canvas ref={canvasRef} className="particle-canvas" />
