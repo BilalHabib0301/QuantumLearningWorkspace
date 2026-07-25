@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import "./App.css";
+import LandingPage from "./components/LandingPage.jsx";
 
 function App() {
   const [status, setStatus] = useState("checking...");
@@ -11,21 +12,7 @@ function App() {
       .catch(() => setStatus("backend not reachable"));
   }, []);
 
-  return (
-    <div
-      style={{
-        textAlign: "center",
-        marginTop: "4rem",
-        backgroundColor: "black",
-        color: "white",
-      }}
-    >
-      <h1>Quantum Learning Workspace</h1>
-      <p>
-        Backend status : <strong>{status}</strong>
-      </p>
-    </div>
-  );
+  return <LandingPage onNavigate={(page) => console.log(page)} />;
 }
 
 export default App;
