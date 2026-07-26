@@ -1,18 +1,20 @@
-import { useState, useEffect } from "react";
-import "./App.css";
-import LandingPage from "./components/LandingPage.jsx";
+import { useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import Signup from "./components/signup";
+import Login from "./components/login";
 
 function App() {
-  const [status, setStatus] = useState("checking...");
+  const [token, setToken] = useState(null);
 
-  useEffect(() => {
-    fetch("http://localhost:8000/health")
-      .then((res) => res.json())
-      .then((data) => setStatus(data.status))
-      .catch(() => setStatus("backend not reachable"));
-  }, []);
-
-  return <LandingPage onNavigate={(page) => console.log(page)} />;
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/login" element={<Login onLoginSuccess={setToken} />} />
+        <Route path="*" element={<Navigate to="/login" />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App;
