@@ -1,1 +1,47 @@
-/* will add styling here when production starts */
+:root {
+  /* Colors */
+  --color-bg-left: #12101f;
+  --color-bg-right: #050508;
+  --color-card-bg: #16162a;
+  --color-input-bg: #16162a;
+  --color-input-border: #2a2a3e;
+  --color-input-border-hover: #4c4c6e;
+
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #9ca3af;
+  --color-text-muted: #6b7280;
+
+  --color-primary-purple: #7c3aed;
+  --color-primary-blue: #2563eb;
+  --color-accent-blue: #60a5fa;
+  --color-accent-purple: #a78bfa;
+  --color-accent-pink: #ec4899;
+
+  --color-error: #ef4444;
+  --color-success: #22c55e;
+
+  --gradient-primary: linear-gradient(to right, var(--color-primary-purple), var(--color-primary-blue));
+  --gradient-logo: linear-gradient(135deg, var(--color-primary-purple), var(--color-accent-pink));
+  --gradient-heading: linear-gradient(to right, var(--color-accent-purple), var(--color-accent-blue));
+
+  /* Fonts */
+  --font-body: 'Poppins', sans-serif;
+
+  /* Radius */
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+}
+
+body {
+  font-family: var(--font-body);
+}
