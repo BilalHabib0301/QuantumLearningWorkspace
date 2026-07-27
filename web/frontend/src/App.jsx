@@ -6,6 +6,7 @@ import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
 import Dashboard from "./components/Dashboard.jsx";
 
+
 function AppContent() {
   const [page, setPage] = useState("landing"); // "landing" | "login" | "signup"
   const { login, isLoggedIn } = useAuth();
