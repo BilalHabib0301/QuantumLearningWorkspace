@@ -8,7 +8,8 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
+  function fetchUploads() {
+    setLoading(true);
     fetch("http://localhost:8000/uploads", {
       headers: {
         Authorization: `Bearer ${token}`,
@@ -26,6 +27,10 @@ export default function Dashboard() {
         setError(err.message);
         setLoading(false);
       });
+  }
+
+  useEffect(() => {
+    fetchUploads();
   }, [token]);
 
   return (
@@ -34,7 +39,9 @@ export default function Dashboard() {
         <h1>Your Dashboard</h1>
         <button onClick={logout}>Logout</button>
       </div>
-       <UploadView />
+
+      <UploadView onUploadSuccess={fetchUploads} />
+
       {loading && <p>Loading your documents...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 

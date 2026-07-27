@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 
-function UploadView() {
+function UploadView({ onUploadSuccess }) {
   const { token } = useAuth();
 
   // This "box" remembers which file the user picked.
@@ -51,6 +51,7 @@ function UploadView() {
       setStatus("success");
       setMessage(`"${selectedFile.name}" uploaded successfully!`);
       setSelectedFile(null);
+      if (onUploadSuccess) onUploadSuccess();
     } catch (err) {
       setStatus("error");
       setMessage(err.message || "Something went wrong while uploading.");
