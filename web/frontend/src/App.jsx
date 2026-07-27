@@ -5,7 +5,7 @@ import LandingPage from "./components/LandingPage.jsx";
 import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
 import Dashboard from "./components/Dashboard.jsx";
-import UploadView from "./UploadView.jsx";
+
 
 function AppContent() {
   const [page, setPage] = useState("landing"); // "landing" | "login" | "signup"
