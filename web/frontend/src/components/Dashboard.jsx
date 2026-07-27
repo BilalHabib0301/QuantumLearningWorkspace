@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import UploadView from "./UploadView.jsx";
 
 export default function Dashboard() {
   const { token, logout } = useAuth();
@@ -33,7 +34,7 @@ export default function Dashboard() {
         <h1>Your Dashboard</h1>
         <button onClick={logout}>Logout</button>
       </div>
-
+       <UploadView />
       {loading && <p>Loading your documents...</p>}
       {error && <p style={{ color: "red" }}>{error}</p>}
 
