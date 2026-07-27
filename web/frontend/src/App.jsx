@@ -1,18 +1,22 @@
 import { useState } from "react";
 import "./App.css";
+import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
 
-function App() {
+function AppContent() {
   const [page, setPage] = useState("landing"); // "landing" | "login" | "signup"
-  const [token, setToken] = useState(null);
+  const { login, isLoggedIn } = useAuth();
 
   const handleLoginSuccess = (accessToken) => {
-    setToken(accessToken);
-    // Dashboard page isn't merged yet — for now we just store the token
-    console.log("Logged in, token:", accessToken);
+    login(accessToken); 
   };
+
+ 
+  if (isLoggedIn) {
+    return <h1 style={{ textAlign: "center", marginTop: "3rem" }}>Logged in! Dashboard coming soon.</h1>;
+  }
 
   if (page === "login") {
     return <Login onLoginSuccess={handleLoginSuccess} />;
@@ -23,6 +27,14 @@ function App() {
   }
 
   return <LandingPage onNavigate={setPage} />;
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
 }
 
 export default App;
