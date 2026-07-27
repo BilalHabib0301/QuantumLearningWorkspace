@@ -4,6 +4,7 @@ import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
+import Dashboard from "./components/Dashboard.jsx";
 
 function AppContent() {
   const [page, setPage] = useState("landing"); // "landing" | "login" | "signup"
@@ -15,8 +16,8 @@ function AppContent() {
 
  
   if (isLoggedIn) {
-    return <h1 style={{ textAlign: "center", marginTop: "3rem" }}>Logged in! Dashboard coming soon.</h1>;
-  }
+    return <Dashboard />;
+}
 
   if (page === "login") {
     return <Login onLoginSuccess={handleLoginSuccess} />;
