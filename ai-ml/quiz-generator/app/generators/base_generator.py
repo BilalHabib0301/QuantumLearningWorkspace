@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 
-
 class BaseGenerator(ABC):
     """
     Base class for all quiz generators.
