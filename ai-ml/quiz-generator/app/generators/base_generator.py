@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict
 
 class BaseGenerator(ABC):
     """
@@ -10,6 +9,14 @@ class BaseGenerator(ABC):
     """
 
     @abstractmethod
-    def generate(self, text: str) -> List[Dict]:
-        """Returns a list of dictionaries (JSON format)."""
+    def generate(self, text: str):
+        """
+        Generate quiz questions from the given text.
+
+        Parameters:
+            text (str): Input text from which questions are generated.
+
+        Returns:
+            list: A list of generated questions.
+        """
         pass
