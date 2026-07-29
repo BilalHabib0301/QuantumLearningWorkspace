@@ -1,48 +1,54 @@
-from groq import Groq
-
-from app.config import GROQ_API_KEY, GROQ_MODEL
-from app.generators.base_generator import BaseGenerator
-
-
+import json
+import groq
+from quiz_generator.app.generators.base_generator import BaseGenerator
+from quiz_generator.app.config import GROQ_API_KEY, GROQ_MODEL
 class MCQGenerator(BaseGenerator):
-    """
-    Generator responsible for creating Multiple Choice Questions (MCQs)
-    from the provided text using the Groq API.
-    """
-
     def __init__(self):
-        """
-        Initialize the Groq client.
-        """
-        self.client = Groq(api_key=GROQ_API_KEY)
+        # Initialize the Groq client using your config
+        self.client = groq.Groq(api_key=GROQ_API_KEY)
 
     def generate(self, text: str):
-        """
-        Generate Multiple Choice Questions using the Groq API.
-        """
-
+        # 1. Define the updated JSON prompt
         prompt = f"""
-        Generate 5 multiple-choice questions from the following text.
+        Generate 5 Multiple Choice Questions based on the text below.
+        Return the result ONLY as a JSON object with a key named "questions" containing an array of objects.
+
+        JSON Schema:
+        {{
+          "questions": [
+            {{
+              "question": "The question text.",
+              "options": ["Option 1", "Option 2", "Option 3", "Option 4"],
+              "answer": "The correct option text exactly as it appears in the options list."
+            }}
+          ]
+        }}
 
         Rules:
-        - Each question should have exactly 4 options.
-        - Clearly mention the correct answer.
-        - Questions should cover different concepts.
-        - Keep the difficulty at medium level.
+        - Generate exactly 5 questions.
+        - Each question must have exactly 4 unique options.
+        - The 'answer' field must contain the text of the correct option.
+        - Difficulty: Medium.
 
         Text:
         {text}
         """
 
+        # 2. Call the Groq API
         response = self.client.chat.completions.create(
             model=GROQ_MODEL,
-            messages=[
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            temperature=0.5
+            messages=[{"role": "user", "content": prompt}],
+            # This is CRITICAL for Groq to return clean JSON
+            response_format={"type": "json_object"} 
         )
 
-        return response.choices[0].message.content
+        # 3. Parse the string content into a Python dictionary
+        raw_output = response.choices[0].message.content
+        parsed_json = json.loads(raw_output)
+
+        # 4. Extract the list of questions and return it
+        # Because we asked for a "questions" key in the prompt
+        if isinstance(parsed_json, dict) and "questions" in parsed_json:
+            return parsed_json["questions"]
+        
+        return parsed_json
