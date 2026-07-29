@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import UploadView from "./UploadView.jsx";
+import ChatInterface from "./ChatInterface.jsx";
+import "./Dashboard.css";
 
 export default function Dashboard() {
   const { token, logout } = useAuth();
@@ -34,30 +36,80 @@ export default function Dashboard() {
   }, [token]);
 
   return (
-    <div style={{ maxWidth: "600px", margin: "3rem auto", padding: "1rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Your Dashboard</h1>
-        <button onClick={logout}>Logout</button>
-      </div>
+    <div className="dashboard-container">
+      {/* Sidebar - left */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <span className="logo-icon">🧠</span>
+            <span className="logo-text">StudyMind <span>AI</span></span>
+          </div>
+        </div>
 
-      <UploadView onUploadSuccess={fetchUploads} />
+        <div className="sidebar-content">
+          {/* Uploader */}
+          <div className="sidebar-section">
+            <UploadView onUploadSuccess={fetchUploads} />
+          </div>
 
-      {loading && <p>Loading your documents...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+          {/* Files List */}
+          <div className="sidebar-section files-section">
+            <div className="section-header">
+              <h4>Knowledge Library</h4>
+              <button className="btn-refresh" onClick={fetchUploads} title="Refresh library">
+                🔄
+              </button>
+            </div>
+            
+            {loading && <p className="status-text">Loading library...</p>}
+            {error && <p className="status-text error-text">{error}</p>}
 
-      {!loading && !error && files.length === 0 && (
-        <p>No files uploaded yet.</p>
-      )}
+            {!loading && !error && files.length === 0 && (
+              <div className="empty-library">
+                <p>No documents uploaded yet. Upload a PDF above to build your knowledge base!</p>
+              </div>
+            )}
 
-      {!loading && !error && files.length > 0 && (
-        <ul>
-          {files.map((file, index) => (
-            <li key={index}>
-              {file.filename} — {file.upload_date}
-            </li>
-          ))}
-        </ul>
-      )}
+            {!loading && !error && files.length > 0 && (
+              <div className="files-list-wrapper">
+                <ul className="files-list">
+                  {files.map((file, index) => (
+                    <li key={index} className="file-item">
+                      <span className="file-icon">📄</span>
+                      <div className="file-details">
+                        <span className="file-name" title={file.filename}>
+                          {file.filename}
+                        </span>
+                        <span className="file-meta">
+                          {file.file_type?.split("/")[1]?.toUpperCase() || "PDF"} • {new Date(file.upload_date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Footer/Logout */}
+        <div className="sidebar-footer">
+          <div className="user-profile">
+            <div className="user-avatar">U</div>
+            <div className="user-info">
+              <span className="user-label">Active User</span>
+            </div>
+          </div>
+          <button className="btn-logout" onClick={logout}>
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Workspace - right */}
+      <main className="dashboard-main">
+        <ChatInterface key={token} />
+      </main>
     </div>
   );
 }
