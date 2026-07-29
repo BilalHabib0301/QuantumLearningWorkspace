@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import UploadView from "./UploadView.jsx";
+import "./Dashboard.css";
 
 export default function Dashboard() {
   const { token, logout } = useAuth();
@@ -55,51 +56,52 @@ export default function Dashboard() {
   }, [token]);
 
   return (
-    <div style={{ maxWidth: "600px", margin: "3rem auto", padding: "1rem" }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1>Your Dashboard</h1>
-        <button onClick={logout}>Logout</button>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <h1 className="dashboard-title">Your Dashboard</h1>
+        <button className="dashboard-logout-btn" onClick={logout}>Logout</button>
       </div>
 
-      <UploadView onUploadSuccess={fetchUploads} />
+      <div className="dashboard-card">
+        <h2 className="dashboard-section-title">Upload a File</h2>
+        <UploadView onUploadSuccess={fetchUploads} />
+      </div>
 
-      {loading && <p>Loading your documents...</p>}
-      {error && <p style={{ color: "red" }}>{error}</p>}
+      <div className="dashboard-card">
+        <h2 className="dashboard-section-title">Your Files</h2>
 
-      {!loading && !error && files.length === 0 && (
-        <p>No files uploaded yet.</p>
-      )}
+        {loading && <p className="dashboard-status-msg">Loading your documents...</p>}
+        {error && <p className="dashboard-error-msg">{error}</p>}
 
-      {!loading && !error && files.length > 0 && (
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {files.map((file) => (
-            <li
-              key={file.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "0.75rem 0",
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              <div>
-                <div>{file.filename}</div>
-                <div style={{ fontSize: "0.85rem", color: "#666" }}>
-                  {file.upload_date} — {file.status}
+        {!loading && !error && files.length === 0 && (
+          <p className="dashboard-status-msg">No files uploaded yet.</p>
+        )}
+
+        {!loading && !error && files.length > 0 && (
+          <ul className="dashboard-file-list">
+            {files.map((file) => (
+              <li key={file.id} className="dashboard-file-item">
+                <div className="dashboard-file-info">
+                  <span className="dashboard-file-name">{file.filename}</span>
+                  <span className="dashboard-file-meta">
+                    {file.upload_date}
+                    <span className={`dashboard-status-badge ${file.status}`}>
+                      {file.status}
+                    </span>
+                  </span>
                 </div>
-              </div>
-              <button
-                onClick={() => handleDelete(file.id)}
-                disabled={deletingId === file.id}
-                style={{ color: "red", cursor: "pointer" }}
-              >
-                {deletingId === file.id ? "Deleting..." : "Delete"}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
+                <button
+                  className="dashboard-delete-btn"
+                  onClick={() => handleDelete(file.id)}
+                  disabled={deletingId === file.id}
+                >
+                  {deletingId === file.id ? "Deleting..." : "Delete"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </div>
   );
 }

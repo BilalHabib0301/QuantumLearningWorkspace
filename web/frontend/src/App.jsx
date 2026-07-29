@@ -10,12 +10,12 @@ import Dashboard from "./components/Dashboard.jsx";
 function AppContent() {
   const [page, setPage] = useState("landing"); // "landing" | "login" | "signup"
   const { login, isLoggedIn } = useAuth();
-
+  
   const handleLoginSuccess = (accessToken) => {
     login(accessToken); 
   };
 
- 
+
   if (isLoggedIn) {
     return <Dashboard />;
 }
