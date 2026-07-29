@@ -1,5 +1,6 @@
 import os
 from typing import Optional
+import certifi
 
 from dotenv import load_dotenv
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -16,9 +17,12 @@ def get_client() -> AsyncIOMotorClient:
     """Create and cache the MongoDB client instance."""
     global client
     if client is None:
-        client = AsyncIOMotorClient(MONGODB_URI)
+        client = AsyncIOMotorClient(
+    MONGODB_URI,
+    serverSelectionTimeoutMS=10000,
+    tlsCAFile=certifi.where(),
+)
     return client
-
 
 def get_database():
     """Return the configured database object."""

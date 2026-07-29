@@ -1,12 +1,13 @@
-import json
 from groq import Groq
-from quiz_generator.app.generators.base_generator import BaseGenerator
-from quiz_generator.app.config import GROQ_API_KEY, GROQ_MODEL
+
+from app.config import GROQ_API_KEY, GROQ_MODEL
+from app.generators.base_generator import BaseGenerator
+
 
 class ShortAnswerGenerator(BaseGenerator):
     """
     Generator responsible for creating Short Answer questions
-    from the provided text using the Groq API, returning structured JSON.
+    from the provided text using the Groq API.
     """
 
     def __init__(self):
@@ -18,33 +19,21 @@ class ShortAnswerGenerator(BaseGenerator):
     def generate(self, text: str):
         """
         Generate Short Answer questions using the Groq API.
-        Returns a list of dictionaries.
         """
 
-        # Prompt updated for strict JSON output with a root key "questions"
         prompt = f"""
-Generate 5 Short Answer questions based on the text below.
-Return the result ONLY as a JSON object with a key "questions" containing an array.
+        Generate 5 short answer questions from the following text.
 
-JSON Schema:
-{{
-  "questions": [
-    {{
-      "question": "The factual question based on the text.",
-      "answer": "A concise, accurate answer (1-10 words)."
-    }}
-  ]
-}}
+        Rules:
+        - Generate exactly 5 questions.
+        - Each question should require a short factual answer.
+        - Clearly mention the correct answer.
+        - Questions should cover different concepts.
+        - Keep the difficulty at medium level.
 
-Rules:
-- Generate exactly 5 questions.
-- Each question must be factual and answerable directly from the text.
-- Questions should cover different concepts.
-- Difficulty: Medium.
-
-Text:
-{text}
-"""
+        Text:
+        {text}
+        """
 
         response = self.client.chat.completions.create(
             model=GROQ_MODEL,
@@ -54,18 +43,7 @@ Text:
                     "content": prompt
                 }
             ],
-            temperature=0.5,
-            # CRITICAL: Tells Groq to strictly output JSON
-            response_format={"type": "json_object"} 
+            temperature=0.5
         )
 
-        # 1. Get the raw string content from the LLM
-        raw_content = response.choices[0].message.content
-        
-        # 2. Convert string to Python dictionary and return the list
-        try:
-            parsed_data = json.loads(raw_content)
-            return parsed_data.get("questions", [])
-        except json.JSONDecodeError:
-            print("Error: Could not parse Short Answer LLM response as JSON.")
-            return []
+        return response.choices[0].message.content
