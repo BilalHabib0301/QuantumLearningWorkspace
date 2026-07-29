@@ -1,7 +1,7 @@
 from groq import Groq
 
-from app.config import GROQ_API_KEY, GROQ_MODEL
-from app.generators.base_generator import BaseGenerator
+from quiz_generator.app.generators.base_generator import BaseGenerator
+from quiz_generator.app.config import GROQ_API_KEY, GROQ_MODEL
 
 
 class ShortAnswerGenerator(BaseGenerator):
