@@ -7,6 +7,7 @@ export default function Dashboard() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   function fetchUploads() {
     setLoading(true);
@@ -26,6 +27,26 @@ export default function Dashboard() {
       .catch((err) => {
         setError(err.message);
         setLoading(false);
+      });
+  }
+
+  function handleDelete(uploadId) {
+    setDeletingId(uploadId);
+    fetch(`http://localhost:8000/uploads/${uploadId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to delete file");
+        setFiles((prev) => prev.filter((f) => f.id !== uploadId));
+      })
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => {
+        setDeletingId(null);
       });
   }
 
@@ -50,10 +71,31 @@ export default function Dashboard() {
       )}
 
       {!loading && !error && files.length > 0 && (
-        <ul>
-          {files.map((file, index) => (
-            <li key={index}>
-              {file.filename} — {file.upload_date}
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {files.map((file) => (
+            <li
+              key={file.id}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "0.75rem 0",
+                borderBottom: "1px solid #eee",
+              }}
+            >
+              <div>
+                <div>{file.filename}</div>
+                <div style={{ fontSize: "0.85rem", color: "#666" }}>
+                  {file.upload_date} — {file.status}
+                </div>
+              </div>
+              <button
+                onClick={() => handleDelete(file.id)}
+                disabled={deletingId === file.id}
+                style={{ color: "red", cursor: "pointer" }}
+              >
+                {deletingId === file.id ? "Deleting..." : "Delete"}
+              </button>
             </li>
           ))}
         </ul>

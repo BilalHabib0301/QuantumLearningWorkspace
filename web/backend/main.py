@@ -8,6 +8,8 @@ from models import SignupRequest, LoginRequest, Upload
 from database import get_users_collection, get_uploads_collection
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email
 
+from bson import ObjectId
+
 app = FastAPI(title="StudyMind AI Backend")
 
 app.add_middleware(
@@ -95,6 +97,7 @@ async def get_uploads(current_user_email: str = Depends(get_current_user_email))
 
     async for document in cursor:
         user_uploads.append({
+            "id": str(document["_id"]),
             "filename": document["filename"],
             "upload_date": document["upload_date"],
             "file_type": document["file_type"],
@@ -102,3 +105,50 @@ async def get_uploads(current_user_email: str = Depends(get_current_user_email))
         })
 
     return user_uploads
+
+@app.delete("/uploads/{upload_id}")
+async def delete_upload(
+    upload_id: str,
+    current_user_email: str = Depends(get_current_user_email),
+):
+    uploads = get_uploads_collection()
+
+    upload_doc = await uploads.find_one({
+        "_id": ObjectId(upload_id),
+        "user_id": current_user_email,
+    })
+
+    if not upload_doc:
+        raise HTTPException(status_code=404, detail="Upload not found")
+
+    file_path = os.path.join(UPLOAD_DIRECTORY, upload_doc["filename"])
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    await uploads.delete_one({"_id": ObjectId(upload_id)})
+
+    return {"message": "Upload deleted successfully"}
+
+
+@app.delete("/uploads/{upload_id}")
+async def delete_upload(
+    upload_id: str,
+    current_user_email: str = Depends(get_current_user_email),
+):
+    uploads = get_uploads_collection()
+
+    upload_doc = await uploads.find_one({
+        "_id": ObjectId(upload_id),
+        "user_id": current_user_email,
+    })
+
+    if not upload_doc:
+        raise HTTPException(status_code=404, detail="Upload not found")
+
+    file_path = os.path.join(UPLOAD_DIRECTORY, upload_doc["filename"])
+    if os.path.exists(file_path):
+        os.remove(file_path)
+
+    await uploads.delete_one({"_id": ObjectId(upload_id)})
+
+    return {"message": "Upload deleted successfully"}
