@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 
 function UploadView({ onUploadSuccess }) {
   const { token } = useAuth();
+  const fileInputRef = useRef(null);
 
   const [selectedFile, setSelectedFile] = useState(null);
   const [status, setStatus] = useState("");
@@ -44,6 +45,12 @@ function UploadView({ onUploadSuccess }) {
       setStatus("success");
       setMessage(`"${selectedFile.name}" uploaded successfully!`);
       setSelectedFile(null);
+      
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+
       if (onUploadSuccess) onUploadSuccess();
     } catch (err) {
       setStatus("error");
@@ -52,31 +59,42 @@ function UploadView({ onUploadSuccess }) {
   }
 
   return (
-    <div className="upload-view">
+    <div className="upload-container">
+      <h3>Upload Document</h3>
+      <p className="upload-subtitle">Add PDFs to your knowledge base</p>
+      
       <div className="upload-controls">
-        <input
-          className="upload-file-input"
-          type="file"
-          onChange={handleFileChange}
-          accept=".pdf"
-        />
+        <label className="file-input-label">
+          <span>{selectedFile ? "Change File" : "Choose PDF"}</span>
+          <input 
+            type="file" 
+            ref={fileInputRef}
+            onChange={handleFileChange} 
+            accept=".pdf" 
+            className="file-input-hidden"
+          />
+        </label>
+
         <button
-          className="upload-btn"
           onClick={handleUploadClick}
-          disabled={status === "uploading"}
+          className="upload-submit-btn"
+          disabled={status === "uploading" || !selectedFile}
         >
           {status === "uploading" ? "Uploading..." : "Upload"}
         </button>
       </div>
 
       {selectedFile && status !== "success" && (
-        <p className="upload-selected-file">Selected file: {selectedFile.name}</p>
+        <div className="selected-file-info">
+          <span className="file-info-icon">📄</span>
+          <span className="file-info-name" title={selectedFile.name}>{selectedFile.name}</span>
+        </div>
       )}
 
       {message && (
-        <p className={`upload-message ${status === "error" ? "error" : "success"}`}>
+        <div className={`upload-msg ${status === "error" ? "error-msg" : "success-msg"}`}>
           {message}
-        </p>
+        </div>
       )}
     </div>
   );

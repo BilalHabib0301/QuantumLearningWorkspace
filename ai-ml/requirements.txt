@@ -13,3 +13,6 @@ pinecone                # Pinecone vector database client
 pymongo                 # MongoDB client
 python-dotenv           # loads .env config
 requests
+python-dotenv
+groq
+yake

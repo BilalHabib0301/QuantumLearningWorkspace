@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import UploadView from "./UploadView.jsx";
+import ChatInterface from "./ChatInterface.jsx";
 import "./Dashboard.css";
 
 export default function Dashboard() {
@@ -57,51 +58,79 @@ export default function Dashboard() {
 
   return (
     <div className="dashboard-container">
-      <div className="dashboard-header">
-        <h1 className="dashboard-title">Your Dashboard</h1>
-        <button className="dashboard-logout-btn" onClick={logout}>Logout</button>
-      </div>
+      {/* Sidebar - left */}
+      <aside className="dashboard-sidebar">
+        <div className="sidebar-header">
+          <div className="sidebar-logo">
+            <span className="logo-icon">🧠</span>
+            <span className="logo-text">StudyMind <span>AI</span></span>
+          </div>
+        </div>
 
-      <div className="dashboard-card">
-        <h2 className="dashboard-section-title">Upload a File</h2>
-        <UploadView onUploadSuccess={fetchUploads} />
-      </div>
+        <div className="sidebar-content">
+          {/* Uploader */}
+          <div className="sidebar-section">
+            <UploadView onUploadSuccess={fetchUploads} />
+          </div>
 
-      <div className="dashboard-card">
-        <h2 className="dashboard-section-title">Your Files</h2>
+          {/* Files List */}
+          <div className="sidebar-section files-section">
+            <div className="section-header">
+              <h4>Knowledge Library</h4>
+              <button className="btn-refresh" onClick={fetchUploads} title="Refresh library">
+                🔄
+              </button>
+            </div>
+            
+            {loading && <p className="status-text">Loading library...</p>}
+            {error && <p className="status-text error-text">{error}</p>}
 
-        {loading && <p className="dashboard-status-msg">Loading your documents...</p>}
-        {error && <p className="dashboard-error-msg">{error}</p>}
+            {!loading && !error && files.length === 0 && (
+              <div className="empty-library">
+                <p>No documents uploaded yet. Upload a PDF above to build your knowledge base!</p>
+              </div>
+            )}
 
-        {!loading && !error && files.length === 0 && (
-          <p className="dashboard-status-msg">No files uploaded yet.</p>
-        )}
+            {!loading && !error && files.length > 0 && (
+              <div className="files-list-wrapper">
+                <ul className="files-list">
+                  {files.map((file, index) => (
+                    <li key={index} className="file-item">
+                      <span className="file-icon">📄</span>
+                      <div className="file-details">
+                        <span className="file-name" title={file.filename}>
+                          {file.filename}
+                        </span>
+                        <span className="file-meta">
+                          {file.file_type?.split("/")[1]?.toUpperCase() || "PDF"} • {new Date(file.upload_date).toLocaleDateString()}
+                        </span>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
 
-        {!loading && !error && files.length > 0 && (
-          <ul className="dashboard-file-list">
-            {files.map((file) => (
-              <li key={file.id} className="dashboard-file-item">
-                <div className="dashboard-file-info">
-                  <span className="dashboard-file-name">{file.filename}</span>
-                  <span className="dashboard-file-meta">
-                    {file.upload_date}
-                    <span className={`dashboard-status-badge ${file.status}`}>
-                      {file.status}
-                    </span>
-                  </span>
-                </div>
-                <button
-                  className="dashboard-delete-btn"
-                  onClick={() => handleDelete(file.id)}
-                  disabled={deletingId === file.id}
-                >
-                  {deletingId === file.id ? "Deleting..." : "Delete"}
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+        {/* Footer/Logout */}
+        <div className="sidebar-footer">
+          <div className="user-profile">
+            <div className="user-avatar">U</div>
+            <div className="user-info">
+              <span className="user-label">Active User</span>
+            </div>
+          </div>
+          <button className="btn-logout" onClick={logout}>
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Main Workspace - right */}
+      <main className="dashboard-main">
+        <ChatInterface key={token} />
+      </main>
     </div>
   );
 }
