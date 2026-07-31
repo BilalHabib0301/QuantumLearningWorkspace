@@ -8,23 +8,17 @@ import Dashboard from "./components/Dashboard.jsx";
 import ChatInterface from "./components/ChatInterface.jsx";
 
 function LoggedInView() {
-  const [tab, setTab] = useState("dashboard"); // "dashboard" | "chat"
+  const [showChat, setShowChat] = useState(false);
 
-  return (
-    <div>
-      <div style={{ display: "flex", gap: "1rem", padding: "1rem", borderBottom: "1px solid #ddd" }}>
-        <button onClick={() => setTab("dashboard")}>Dashboard</button>
-        <button onClick={() => setTab("chat")}>Chat</button>
-      </div>
+  if (showChat) {
+    return <ChatInterface onBack={() => setShowChat(false)} />;
+  }
 
-      {tab === "dashboard" && <Dashboard />}
-      {tab === "chat" && <ChatInterface />}
-    </div>
-  );
+  return <Dashboard onOpenChat={() => setShowChat(true)} />;
 }
 
 function AppContent() {
-  const [page, setPage] = useState("landing"); // "landing" | "login" | "signup"
+  const [page, setPage] = useState("landing");
   const { login, isLoggedIn } = useAuth();
 
   const handleLoginSuccess = (accessToken) => {
