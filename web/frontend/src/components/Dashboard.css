@@ -501,49 +501,58 @@
 }
 
 .btn-delete-file {
-  width: 42px;
-  height: 42px;
-  border-radius: 10px;
-  border: 1.5px solid rgba(239, 68, 68, 0.3);
-  background: rgba(239, 68, 68, 0.06);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  border: 2px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.08);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.1rem;
+  font-size: 1.2rem;
   transition: all 0.3s ease;
   flex-shrink: 0;
-  grid-column: 5;
   position: relative;
 }
 
 .btn-delete-file:hover:not(:disabled) {
-  background: rgba(239, 68, 68, 0.18);
-  border-color: rgba(239, 68, 68, 0.5);
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.7);
+  box-shadow: 0 0 18px rgba(239, 68, 68, 0.3);
   transform: scale(1.15);
-  box-shadow: 0 0 14px rgba(239, 68, 68, 0.25);
 }
 
 .btn-delete-file::after {
   content: "Delete";
   position: absolute;
-  right: calc(100% + 8px);
-  background: var(--color-card-bg);
+  right: calc(100% + 10px);
+  background: #16162a;
   padding: 5px 10px;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: var(--color-error);
+  color: #ef4444;
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s ease;
-  border: 1px solid rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
 .btn-delete-file:hover::after {
   opacity: 1;
 }
+
+.btn-delete-file svg {
+  width: 20px;
+  height: 20px;
+}
+
+.btn-delete-file:hover:not(:disabled) svg {
+  filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.5));
+}
+
 
 .mini-spinner {
   width: 14px;
