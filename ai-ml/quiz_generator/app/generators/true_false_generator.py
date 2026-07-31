@@ -1,12 +1,12 @@
 from groq import Groq
 
-from app.config import GROQ_API_KEY, GROQ_MODEL
-from app.generators.base_generator import BaseGenerator
+from quiz_generator.app.generators.base_generator import BaseGenerator
+from quiz_generator.app.config import GROQ_API_KEY, GROQ_MODEL
 
 
-class MCQGenerator(BaseGenerator):
+class TrueFalseGenerator(BaseGenerator):
     """
-    Generator responsible for creating Multiple Choice Questions (MCQs)
+    Generator responsible for creating True/False questions
     from the provided text using the Groq API.
     """
 
@@ -15,17 +15,18 @@ class MCQGenerator(BaseGenerator):
         Initialize the Groq client.
         """
         self.client = Groq(api_key=GROQ_API_KEY)
-
+        
     def generate(self, text: str):
         """
-        Generate Multiple Choice Questions using the Groq API.
+        Generate True/False questions using the Groq API.
         """
 
         prompt = f"""
-        Generate 5 multiple-choice questions from the following text.
+        Generate 5 True/False questions from the following text.
 
         Rules:
-        - Each question should have exactly 4 options.
+        - Generate exactly 5 questions.
+        - Each question must have only two options: True and False.
         - Clearly mention the correct answer.
         - Questions should cover different concepts.
         - Keep the difficulty at medium level.

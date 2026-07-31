@@ -9,6 +9,7 @@ export default function Dashboard() {
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deletingId, setDeletingId] = useState(null);
 
   function fetchUploads() {
     setLoading(true);
@@ -28,6 +29,26 @@ export default function Dashboard() {
       .catch((err) => {
         setError(err.message);
         setLoading(false);
+      });
+  }
+
+  function handleDelete(uploadId) {
+    setDeletingId(uploadId);
+    fetch(`http://localhost:8000/uploads/${uploadId}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to delete file");
+        setFiles((prev) => prev.filter((f) => f.id !== uploadId));
+      })
+      .catch((err) => {
+        setError(err.message);
+      })
+      .finally(() => {
+        setDeletingId(null);
       });
   }
 

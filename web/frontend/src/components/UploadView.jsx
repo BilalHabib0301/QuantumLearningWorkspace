@@ -6,7 +6,7 @@ function UploadView({ onUploadSuccess }) {
   const fileInputRef = useRef(null);
 
   const [selectedFile, setSelectedFile] = useState(null);
-  const [status, setStatus] = useState(""); // "", "uploading", "success", "error"
+  const [status, setStatus] = useState("");
   const [message, setMessage] = useState("");
 
   function handleFileChange(event) {

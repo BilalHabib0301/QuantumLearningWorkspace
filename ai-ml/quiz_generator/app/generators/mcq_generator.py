@@ -1,12 +1,12 @@
 from groq import Groq
 
-from app.config import GROQ_API_KEY, GROQ_MODEL
-from app.generators.base_generator import BaseGenerator
+from quiz_generator.app.generators.base_generator import BaseGenerator
+from quiz_generator.app.config import GROQ_API_KEY, GROQ_MODEL
 
 
-class ShortAnswerGenerator(BaseGenerator):
+class MCQGenerator(BaseGenerator):
     """
-    Generator responsible for creating Short Answer questions
+    Generator responsible for creating Multiple Choice Questions (MCQs)
     from the provided text using the Groq API.
     """
 
@@ -18,15 +18,14 @@ class ShortAnswerGenerator(BaseGenerator):
 
     def generate(self, text: str):
         """
-        Generate Short Answer questions using the Groq API.
+        Generate Multiple Choice Questions using the Groq API.
         """
 
         prompt = f"""
-        Generate 5 short answer questions from the following text.
+        Generate 5 multiple-choice questions from the following text.
 
         Rules:
-        - Generate exactly 5 questions.
-        - Each question should require a short factual answer.
+        - Each question should have exactly 4 options.
         - Clearly mention the correct answer.
         - Questions should cover different concepts.
         - Keep the difficulty at medium level.
