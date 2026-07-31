@@ -5,20 +5,29 @@ import LandingPage from "./components/LandingPage.jsx";
 import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
 import Dashboard from "./components/Dashboard.jsx";
+import ChatInterface from "./components/ChatInterface.jsx";
 
+function LoggedInView() {
+  const [showChat, setShowChat] = useState(false);
+
+  if (showChat) {
+    return <ChatInterface onBack={() => setShowChat(false)} />;
+  }
+
+  return <Dashboard onOpenChat={() => setShowChat(true)} />;
+}
 
 function AppContent() {
-  const [page, setPage] = useState("landing"); // "landing" | "login" | "signup"
+  const [page, setPage] = useState("landing");
   const { login, isLoggedIn } = useAuth();
-  
+
   const handleLoginSuccess = (accessToken) => {
-    login(accessToken); 
+    login(accessToken);
   };
 
-
   if (isLoggedIn) {
-    return <Dashboard />;
-}
+    return <LoggedInView />;
+  }
 
   if (page === "login") {
     return <Login onLoginSuccess={handleLoginSuccess} />;
