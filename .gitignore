@@ -7,3 +7,7 @@ __pycache__/
 
 .env
 uploaded_files/
+
+shared_chroma_data/
+test_sample*.pdf
+test_isolation.py
