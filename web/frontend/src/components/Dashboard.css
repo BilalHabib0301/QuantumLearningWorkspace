@@ -42,7 +42,8 @@
 
 .sidebar-logo .logo-text span {
   background: var(--gradient-logo);
-  -webkit-background-clip: text;
+ -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
