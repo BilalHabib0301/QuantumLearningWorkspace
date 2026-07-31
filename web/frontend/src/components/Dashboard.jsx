@@ -253,21 +253,35 @@ function DocumentsView() {
           <div className="file-rows">
             {files.map((file) => {
               const isDeleting = deletingId === file.id;
+
+              // Clean file type: show PDF, DOCX, TXT etc. instead of long MIME types
+              const getFileType = (mime, filename) => {
+                if (mime && mime.includes("/")) {
+                  const subtype = mime.split("/")[1]?.split(".")[0].toUpperCase() || "";
+                  if (subtype.includes("OFFICE") || subtype.includes("WORD") || subtype.includes("OPENXML") || subtype.includes("VND")) {
+                    return "DOCX";
+                  }
+                  if (subtype.length <= 6) return subtype;
+                }
+                // Fallback: extract from filename extension
+                const ext = filename.split(".").pop()?.toUpperCase() || "PDF";
+                if (ext.length > 6) return "FILE";
+                return ext;
+              };
+
               return (
                 <div
                   key={file.id}
                   className={`file-row ${isDeleting ? "deleting" : ""}`}
                 >
-                  <div className="file-row-left">
-                    <div className="file-icon-box">📄</div>
-                    <div className="file-info">
-                      <span className="file-name-text" title={file.filename}>
-                        {file.filename}
-                      </span>
-                      <span className="file-type-text">
-                        {(file.file_type || "PDF").split("/")[1]?.toUpperCase() || "PDF"}
-                      </span>
-                    </div>
+                  <div className="file-icon-box">📄</div>
+                  <div className="file-info">
+                    <span className="file-name-text" title={file.filename}>
+                      {file.filename}
+                    </span>
+                    <span className="file-type-text">
+                      {getFileType(file.file_type, file.filename)}
+                    </span>
                   </div>
                   <span className="file-date-text">
                     {file.upload_date
