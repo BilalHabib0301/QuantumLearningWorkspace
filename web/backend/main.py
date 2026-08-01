@@ -7,11 +7,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import SignupRequest, LoginRequest, Upload
 from database import get_users_collection, get_uploads_collection
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email
-
+from routes.chat import router as chat_router
 from bson import ObjectId
 
 app = FastAPI(title="StudyMind AI Backend")
-
+app.include_router(chat_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
