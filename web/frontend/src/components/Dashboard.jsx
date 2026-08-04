@@ -5,7 +5,8 @@ import "./Dashboard.css";
 // ─── Sub-Components ──────────────────────────────────────────────────────────
 
 function SidebarNav({ activeTab, setActiveTab }) {
-  const { logout } = useAuth();
+  const { logout, userEmail } = useAuth();
+  const initial = userEmail ? userEmail[0].toUpperCase() : "U";
 
   const navItems = [
     { id: "documents", icon: "📄", label: "Documents" },
@@ -38,15 +39,16 @@ function SidebarNav({ activeTab, setActiveTab }) {
 
       {/* Bottom: User + Logout */}
       <div className="sidebar-bottom">
-        <div className="user-avatar-circle">U</div>
+        <div className="user-avatar-circle" title={userEmail || "User"}>
+          {initial}
+        </div>
         <button className="logout-icon-btn" onClick={logout} title="Logout">
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-</button>
-
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </div>
     </aside>
   );
@@ -87,7 +89,7 @@ function TopBar({ activeTab }) {
 }
 
 function DocumentsView() {
-  const { token } = useAuth();
+  const { token, handle401 } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -106,11 +108,12 @@ function DocumentsView() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
+        if (handle401(res)) return;
         if (!res.ok) throw new Error("Failed to fetch uploads");
         return res.json();
       })
       .then((data) => {
-        setFiles(data);
+        if (data) setFiles(data);
         setLoading(false);
       })
       .catch((err) => {
@@ -138,13 +141,15 @@ function DocumentsView() {
       body: formData,
     })
       .then(async (res) => {
+        if (handle401(res)) return;
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.detail || "Upload failed");
         }
         return res.json();
       })
-      .then(() => {
+      .then((data) => {
+        if (!data) return;
         setUploadMsg(`"${selectedFile.name}" uploaded successfully!`);
         setUploadStatus("success");
         setSelectedFile(null);
@@ -167,6 +172,7 @@ function DocumentsView() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
+        if (handle401(res)) return;
         if (!res.ok) throw new Error("Failed to delete file");
         setFiles((prev) => prev.filter((f) => f.id !== uploadId));
       })
@@ -328,7 +334,7 @@ function DocumentsView() {
 }
 
 function ChatView() {
-  const { token } = useAuth();
+  const { token, handle401 } = useAuth();
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem("studymind_chat_history");
     return saved
@@ -395,6 +401,7 @@ function ChatView() {
         }),
       });
 
+      if (handle401(response)) return;
       if (!response.ok) throw new Error("Failed to connect to AI server");
 
       const data = await response.json();

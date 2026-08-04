@@ -27,7 +27,7 @@ const getStorageKey = (token) => {
 };
 
 export default function ChatInterface() {
-  const { token } = useAuth();
+  const { token, handle401 } = useAuth();
   const [messages, setMessages] = useState(() => {
     const key = getStorageKey(token);
     const saved = localStorage.getItem(key);
@@ -94,6 +94,8 @@ export default function ChatInterface() {
           include_sources: true
         })
       });
+
+      if (handle401(response)) return;
 
       if (!response.ok) {
         throw new Error("Failed to connect to AI server");
