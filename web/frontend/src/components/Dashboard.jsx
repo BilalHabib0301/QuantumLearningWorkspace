@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import SettingsView from "./SettingsView.jsx";
 import "./Dashboard.css";
 
 // ─── Sub-Components ──────────────────────────────────────────────────────────
@@ -12,6 +13,7 @@ function SidebarNav({ activeTab, setActiveTab }) {
     { id: "documents", icon: "📄", label: "Documents" },
     { id: "chat", icon: "💬", label: "AI Chat" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
+    { id: "settings", icon: "⚙️", label: "Settings" },
   ];
 
   return (
@@ -39,7 +41,12 @@ function SidebarNav({ activeTab, setActiveTab }) {
 
       {/* Bottom: User + Logout */}
       <div className="sidebar-bottom">
-        <div className="user-avatar-circle" title={userEmail || "User"}>
+        <div
+          className="user-avatar-circle"
+          onClick={() => setActiveTab("settings")}
+          title={`${userEmail || "User"} (Click for Settings)`}
+          style={{ cursor: "pointer" }}
+        >
           {initial}
         </div>
         <button className="logout-icon-btn" onClick={logout} title="Logout">
@@ -67,6 +74,10 @@ function TopBar({ activeTab }) {
     graph: {
       title: "Knowledge Graph",
       subtitle: "Visualize connections between concepts in your materials",
+    },
+    settings: {
+      title: "Account Settings",
+      subtitle: "Manage your profile, session security, and workspace preferences",
     },
   };
 
@@ -564,6 +575,7 @@ export default function Dashboard() {
           {activeTab === "documents" && <DocumentsView />}
           {activeTab === "chat" && <ChatView />}
           {activeTab === "graph" && <GraphView />}
+          {activeTab === "settings" && <SettingsView />}
         </div>
       </div>
     </div>
