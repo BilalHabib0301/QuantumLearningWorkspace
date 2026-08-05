@@ -10,6 +10,9 @@ from auth_utils import hash_password, verify_password, create_access_token, get_
 from routes.chat import router as chat_router
 from bson import ObjectId
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 app = FastAPI(title="StudyMind AI Backend")
 app.include_router(chat_router)
 app.add_middleware(
@@ -68,6 +71,7 @@ async def upload_file(
     file: UploadFile = File(...),
     current_user_email: str = Depends(get_current_user_email),
 ):
+    os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     file_path = os.path.join(UPLOAD_DIRECTORY, file.filename)
 
     with open(file_path, "wb") as buffer:
@@ -106,28 +110,6 @@ async def get_uploads(current_user_email: str = Depends(get_current_user_email))
 
     return user_uploads
 
-@app.delete("/uploads/{upload_id}")
-async def delete_upload(
-    upload_id: str,
-    current_user_email: str = Depends(get_current_user_email),
-):
-    uploads = get_uploads_collection()
-
-    upload_doc = await uploads.find_one({
-        "_id": ObjectId(upload_id),
-        "user_id": current_user_email,
-    })
-
-    if not upload_doc:
-        raise HTTPException(status_code=404, detail="Upload not found")
-
-    file_path = os.path.join(UPLOAD_DIRECTORY, upload_doc["filename"])
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-    await uploads.delete_one({"_id": ObjectId(upload_id)})
-
-    return {"message": "Upload deleted successfully"}
 
 
 @app.delete("/uploads/{upload_id}")
@@ -152,3 +134,15 @@ async def delete_upload(
     await uploads.delete_one({"_id": ObjectId(upload_id)})
 
     return {"message": "Upload deleted successfully"}
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    print("VALIDATION ERROR:")
+    print(exc.errors())
+    print("BODY:")
+    print(exc.body)
+
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
