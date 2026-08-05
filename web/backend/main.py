@@ -129,27 +129,3 @@ async def delete_upload(
     await uploads.delete_one({"_id": ObjectId(upload_id)})
 
     return {"message": "Upload deleted successfully"}
-
-
-@app.delete("/uploads/{upload_id}")
-async def delete_upload(
-    upload_id: str,
-    current_user_email: str = Depends(get_current_user_email),
-):
-    uploads = get_uploads_collection()
-
-    upload_doc = await uploads.find_one({
-        "_id": ObjectId(upload_id),
-        "user_id": current_user_email,
-    })
-
-    if not upload_doc:
-        raise HTTPException(status_code=404, detail="Upload not found")
-
-    file_path = os.path.join(UPLOAD_DIRECTORY, upload_doc["filename"])
-    if os.path.exists(file_path):
-        os.remove(file_path)
-
-    await uploads.delete_one({"_id": ObjectId(upload_id)})
-
-    return {"message": "Upload deleted successfully"}

@@ -30,11 +30,11 @@ function AppContent() {
   }
 
   if (page === "login") {
-    return <Login onLoginSuccess={handleLoginSuccess} />;
+    return <Login onLoginSuccess={handleLoginSuccess} onBackToHome={() => setPage("landing")} />;
   }
 
   if (page === "signup") {
-    return <Signup />;
+    return <Signup onLoginSuccess={handleLoginSuccess} onBackToHome={() => setPage("landing")} />;
   }
 
   return <LandingPage onNavigate={setPage} />;

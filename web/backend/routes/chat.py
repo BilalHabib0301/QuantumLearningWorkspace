@@ -1,8 +1,9 @@
+from __future__ import annotations
 import time
 from collections import defaultdict, deque
 from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict
 
 router = APIRouter()
 
@@ -15,7 +16,7 @@ class HistoryMessage(BaseModel):
 
 class AskRequest(BaseModel):
     question: str
-    history: Optional[list[HistoryMessage]] = None
+    history: Optional[List[HistoryMessage]] = None
     top_k: Optional[int] = 4
     include_sources: Optional[bool] = True
     rerank: Optional[bool] = True
@@ -38,19 +39,19 @@ class Timing(BaseModel):
 class AskResponse(BaseModel):
     answer: str
     refused: bool
-    sources: list[Source]
-    source_ids: list[str]
+    sources: List[Source]
+    source_ids: List[str]
     rewritten_question: str
     grounded: bool
     retrieval_rounds: int
-    hop_queries: list[str]
+    hop_queries: List[str]
     conflict_hint: Optional[str] = None
     cached: bool
     timing: Timing
 
 
 # ---- Simple in-memory rate limiter (10 requests / 60s per user/IP) ----
-request_log: dict[str, deque] = defaultdict(deque)
+request_log: Dict[str, deque] = defaultdict(deque)
 RATE_LIMIT = 10
 WINDOW_SECONDS = 60
 
