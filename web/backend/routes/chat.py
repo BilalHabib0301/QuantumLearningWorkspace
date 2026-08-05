@@ -1,8 +1,9 @@
-import httpx
-
-from fastapi import APIRouter, HTTPException, Request
+from __future__ import annotations
+import time
+from collections import defaultdict, deque
+from fastapi import APIRouter, HTTPException, Request, Response
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List, Dict
 
 router = APIRouter()
 
@@ -16,7 +17,7 @@ class HistoryMessage(BaseModel):
 
 class AskRequest(BaseModel):
     question: str
-    history: Optional[list[HistoryMessage]] = None
+    history: Optional[List[HistoryMessage]] = None
     top_k: Optional[int] = 4
     include_sources: Optional[bool] = True
     rerank: Optional[bool] = True
@@ -24,40 +25,51 @@ class AskRequest(BaseModel):
     skip_cache: Optional[bool] = False
 
 
-# ---------------- Proxy Endpoint ---------------- #
+class Source(BaseModel):
+    document: str
+    chunk: str
 
-@router.post("/ask")
-async def ask(request: AskRequest, req: Request):
 
-    payload = {
-        "question": request.question,
-        "user_id": req.headers.get("X-User-Id", "guest"),
-        "history": [
-            {
-                "role": h.role,
-                "content": h.content,
-            }
-            for h in (request.history or [])
-        ],
-        "top_k": request.top_k,
-        "include_sources": request.include_sources,
-        "rerank": request.rerank,
-        "multi_hop": request.multi_hop,
-        "skip_cache": request.skip_cache,
-    }
+class Timing(BaseModel):
+    retrieval_ms: int
+    llm_ms: int
+    grounding_ms: int
+    total_ms: int
 
-    try:
-        async with httpx.AsyncClient(timeout=120) as client:
-            response = await client.post(
-                "http://127.0.0.1:8001/ask",
-                json=payload,
-            )
 
-        response.raise_for_status()
+class AskResponse(BaseModel):
+    answer: str
+    refused: bool
+    sources: List[Source]
+    source_ids: List[str]
+    rewritten_question: str
+    grounded: bool
+    retrieval_rounds: int
+    hop_queries: List[str]
+    conflict_hint: Optional[str] = None
+    cached: bool
+    timing: Timing
 
-        return response.json()
 
-    except httpx.HTTPStatusError as e:
+# ---- Simple in-memory rate limiter (10 requests / 60s per user/IP) ----
+request_log: Dict[str, deque] = defaultdict(deque)
+RATE_LIMIT = 10
+WINDOW_SECONDS = 60
+
+
+@router.post("/ask", response_model=AskResponse)
+def mock_ask(request: AskRequest, req: Request, res: Response):
+    # Identify the caller: X-User-Id header, or fall back to their IP
+    user_key = req.headers.get("X-User-Id") or req.client.host
+    now = time.time()
+
+    # Clean out old requests outside the time window
+    timestamps = request_log[user_key]
+    while timestamps and timestamps[0] < now - WINDOW_SECONDS:
+        timestamps.popleft()
+
+    if len(timestamps) >= RATE_LIMIT:
+        retry_after = int(WINDOW_SECONDS - (now - timestamps[0]))
         raise HTTPException(
             status_code=e.response.status_code,
             detail=e.response.text,

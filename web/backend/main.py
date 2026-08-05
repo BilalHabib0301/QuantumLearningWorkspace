@@ -110,8 +110,6 @@ async def get_uploads(current_user_email: str = Depends(get_current_user_email))
 
     return user_uploads
 
-
-
 @app.delete("/uploads/{upload_id}")
 async def delete_upload(
     upload_id: str,
@@ -134,15 +132,3 @@ async def delete_upload(
     await uploads.delete_one({"_id": ObjectId(upload_id)})
 
     return {"message": "Upload deleted successfully"}
-
-@app.exception_handler(RequestValidationError)
-async def validation_exception_handler(request, exc):
-    print("VALIDATION ERROR:")
-    print(exc.errors())
-    print("BODY:")
-    print(exc.body)
-
-    return JSONResponse(
-        status_code=422,
-        content={"detail": exc.errors()},
-    )
