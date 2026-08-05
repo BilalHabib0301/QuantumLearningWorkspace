@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from "react";
+import { useToast } from "./ToastContext.jsx";
 
 const AuthContext = createContext(null);
 
@@ -21,6 +22,8 @@ function parseJwt(token) {
 }
 
 export function AuthProvider({ children }) {
+  const { showToast } = useToast();
+
   const [token, setToken] = useState(() => {
     try {
       const stored = localStorage.getItem("auth_token");
@@ -65,6 +68,7 @@ export function AuthProvider({ children }) {
     if (payload && payload.sub) {
       setUserEmail(payload.sub);
     }
+    showToast("Logged in successfully!", "success");
   };
 
   const logout = () => {
@@ -75,11 +79,13 @@ export function AuthProvider({ children }) {
     }
     setToken(null);
     setUserEmail(null);
+    showToast("Logged out successfully", "info");
   };
 
   const handle401 = (response) => {
     if (response && response.status === 401) {
       logout();
+      showToast("Session expired, please log in again", "error");
       return true;
     }
     return false;
