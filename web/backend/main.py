@@ -68,6 +68,7 @@ async def upload_file(
     file: UploadFile = File(...),
     current_user_email: str = Depends(get_current_user_email),
 ):
+    os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     file_path = os.path.join(UPLOAD_DIRECTORY, file.filename)
 
     with open(file_path, "wb") as buffer:
