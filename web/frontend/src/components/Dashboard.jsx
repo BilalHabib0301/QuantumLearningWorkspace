@@ -99,7 +99,7 @@ function TopBar({ activeTab }) {
   );
 }
 
-function DocumentsView() {
+function DocumentsView({ onAskAboutDocument }) {
   const { token, handle401 } = useAuth();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -112,9 +112,11 @@ function DocumentsView() {
 
   const API_BASE = "http://localhost:8000";
 
-  function fetchUploads() {
-    setLoading(true);
-    setError("");
+  function fetchUploads(isSilent = false) {
+    if (!isSilent) {
+      setLoading(true);
+      setError("");
+    }
     fetch(`${API_BASE}/uploads`, {
       headers: { Authorization: `Bearer ${token}` },
     })
@@ -125,11 +127,11 @@ function DocumentsView() {
       })
       .then((data) => {
         if (data) setFiles(data);
-        setLoading(false);
+        if (!isSilent) setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
-        setLoading(false);
+        if (!isSilent) setError(err.message);
+        if (!isSilent) setLoading(false);
       });
   }
 
@@ -161,11 +163,10 @@ function DocumentsView() {
       })
       .then((data) => {
         if (!data) return;
-        setUploadMsg(`"${selectedFile.name}" uploaded successfully!`);
+        setUploadMsg(`"${selectedFile.name}" uploaded successfully! Processing started...`);
         setUploadStatus("success");
         setSelectedFile(null);
-        setUploadStatus("");
-        fetchUploads();
+        fetchUploads(true);
       })
       .catch((err) => {
         setUploadMsg(err.message || "Something went wrong.");
@@ -197,6 +198,12 @@ function DocumentsView() {
 
   useEffect(() => {
     fetchUploads();
+    // Poll every 3 seconds to synchronize real-time file processing status
+    const interval = setInterval(() => {
+      fetchUploads(true);
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, [token]);
 
   return (
@@ -240,7 +247,7 @@ function DocumentsView() {
           <h3>Knowledge Library</h3>
           <div className="header-actions">
             <span className="file-count-badge">{files.length} file{files.length !== 1 ? "s" : ""}</span>
-            <button className="btn-refresh" onClick={fetchUploads} title="Refresh">
+            <button className="btn-refresh" onClick={() => fetchUploads(false)} title="Refresh">
               🔄
             </button>
           </div>
@@ -259,7 +266,7 @@ function DocumentsView() {
         {!loading && error && (
           <div className="error-state">
             <p>{error}</p>
-            <button onClick={fetchUploads}>Retry</button>
+            <button onClick={() => fetchUploads(false)}>Retry</button>
           </div>
         )}
 
@@ -275,8 +282,11 @@ function DocumentsView() {
           <div className="file-rows">
             {files.map((file) => {
               const isDeleting = deletingId === file.id;
+              const statusRaw = (file.status || "Ready").toLowerCase();
+              const isProcessing = statusRaw === "processing";
+              const displayStatus = isProcessing ? "Processing" : "Ready";
 
-              // Clean file type: show PDF, DOCX, TXT etc. instead of long MIME types
+              // Clean file type badge
               const getFileType = (mime, filename) => {
                 if (mime && mime.includes("/")) {
                   const subtype = mime.split("/")[1]?.split(".")[0].toUpperCase() || "";
@@ -285,7 +295,6 @@ function DocumentsView() {
                   }
                   if (subtype.length <= 6) return subtype;
                 }
-                // Fallback: extract from filename extension
                 const ext = filename.split(".").pop()?.toUpperCase() || "PDF";
                 if (ext.length > 6) return "FILE";
                 return ext;
@@ -312,28 +321,45 @@ function DocumentsView() {
                         })
                       : "Unknown"}
                   </span>
-                  <div className="status-pill">
-                    <span className="status-dot"></span>
-                    {file.status || "Processed"}
+                  
+                  {/* Status Pill */}
+                  <div className={`status-pill ${isProcessing ? "status-processing" : "status-ready"}`}>
+                    <span className={`status-dot ${isProcessing ? "pulse-dot" : "solid-dot"}`}></span>
+                    {displayStatus}
                   </div>
-                  <button
-  className="btn-delete-file"
-  onClick={() => handleDelete(file.id)}
-  disabled={isDeleting}
-  title="Delete file"
->
-  {isDeleting ? (
-    <span className="mini-spinner"></span>
-  ) : (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#ef4444" }}>
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-  )}
-</button>
 
+                  {/* Ask about this document option */}
+                  <button
+                    className={`btn-ask-doc ${isProcessing ? "disabled" : ""}`}
+                    onClick={() => !isProcessing && onAskAboutDocument(file.filename)}
+                    disabled={isProcessing}
+                    title={
+                      isProcessing
+                        ? "File is currently processing and not yet searchable"
+                        : `Ask questions about ${file.filename}`
+                    }
+                  >
+                    💬 Ask AI
+                  </button>
+
+                  {/* Delete Button */}
+                  <button
+                    className="btn-delete-file"
+                    onClick={() => handleDelete(file.id)}
+                    disabled={isDeleting}
+                    title="Delete file"
+                  >
+                    {isDeleting ? (
+                      <span className="mini-spinner"></span>
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#ef4444" }}>
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
               );
             })}
@@ -344,8 +370,9 @@ function DocumentsView() {
   );
 }
 
-function ChatView() {
+function ChatView({ targetDocument, setTargetDocument }) {
   const { token, handle401 } = useAuth();
+  const [files, setFiles] = useState([]);
   const [messages, setMessages] = useState(() => {
     const saved = localStorage.getItem("studymind_chat_history");
     return saved
@@ -354,7 +381,7 @@ function ChatView() {
           {
             role: "assistant",
             content:
-              "Hello! I'm your StudyMind AI assistant. Ask me anything about your uploaded study materials, and I'll find the answers for you.",
+              "Hello! I'm your StudyMind AI assistant. Select a document or ask me anything about your uploaded study materials.",
             timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           },
         ];
@@ -363,6 +390,27 @@ function ChatView() {
   const [isLoading, setIsLoading] = useState(false);
 
   const API_BASE = "http://localhost:8000";
+
+  // Fetch uploads to populate document scope selector
+  function fetchUploads() {
+    fetch(`${API_BASE}/uploads`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (handle401(res)) return;
+        if (res.ok) return res.json();
+      })
+      .then((data) => {
+        if (data) setFiles(data);
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    fetchUploads();
+    const interval = setInterval(fetchUploads, 3000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   // Save history
   useEffect(() => {
@@ -409,6 +457,7 @@ function ChatView() {
           history: apiHistory,
           top_k: 4,
           include_sources: true,
+          filename: targetDocument || null,
         }),
       });
 
@@ -465,16 +514,57 @@ function ChatView() {
 
   return (
     <div className="chat-view">
-      {/* Chat Header */}
+      {/* Chat Header Bar */}
       <div className="chat-header-bar">
-        <div className="chat-status-info">
-          <span className="status-dot-green"></span>
-          <span className="status-text">Online</span>
+        <div className="chat-doc-selector-container">
+          <span className="selector-icon">🎯 Scope:</span>
+          <select
+            value={targetDocument || ""}
+            onChange={(e) => setTargetDocument(e.target.value || null)}
+            className="chat-doc-select"
+          >
+            <option value="">All Searchable Documents</option>
+            {files.map((file) => {
+              const isProcessing = (file.status || "").toLowerCase() === "processing";
+              return (
+                <option
+                  key={file.id}
+                  value={file.filename}
+                  disabled={isProcessing}
+                >
+                  {file.filename} {isProcessing ? "⏳ (Processing - Not Searchable)" : "✓ (Ready)"}
+                </option>
+              );
+            })}
+          </select>
+          {targetDocument && (
+            <button
+              className="btn-clear-target-doc"
+              onClick={() => setTargetDocument(null)}
+              title="Clear active document filter"
+            >
+              ✕ Clear Filter
+            </button>
+          )}
         </div>
-        <button className="btn-clear-chat" onClick={clearHistory}>
-          Clear
-        </button>
+
+        <div className="chat-header-right">
+          <div className="chat-status-info">
+            <span className="status-dot-green"></span>
+            <span className="status-text">Online</span>
+          </div>
+          <button className="btn-clear-chat" onClick={clearHistory}>
+            Clear
+          </button>
+        </div>
       </div>
+
+      {/* Target Document Notification Banner */}
+      {targetDocument && (
+        <div className="target-doc-banner">
+          <span>Asking specifically about <strong>"{targetDocument}"</strong></span>
+        </div>
+      )}
 
       {/* Messages */}
       <div className="chat-messages-scroll" id="chat-messages-scroll">
@@ -533,7 +623,11 @@ function ChatView() {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question about your documents... (Press Enter to send)"
+          placeholder={
+            targetDocument
+              ? `Ask a question about ${targetDocument}...`
+              : "Ask a question about your documents... (Press Enter to send)"
+          }
           className="chat-text-input"
           disabled={isLoading}
         />
@@ -565,6 +659,12 @@ function GraphView() {
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("documents");
+  const [targetDocument, setTargetDocument] = useState(null);
+
+  const handleAskAboutDocument = (filename) => {
+    setTargetDocument(filename);
+    setActiveTab("chat");
+  };
 
   return (
     <div className="app-shell">
@@ -572,8 +672,15 @@ export default function Dashboard() {
       <div className="main-area">
         <TopBar activeTab={activeTab} />
         <div className="page-content">
-          {activeTab === "documents" && <DocumentsView />}
-          {activeTab === "chat" && <ChatView />}
+          {activeTab === "documents" && (
+            <DocumentsView onAskAboutDocument={handleAskAboutDocument} />
+          )}
+          {activeTab === "chat" && (
+            <ChatView
+              targetDocument={targetDocument}
+              setTargetDocument={setTargetDocument}
+            />
+          )}
           {activeTab === "graph" && <GraphView />}
           {activeTab === "settings" && <SettingsView />}
         </div>

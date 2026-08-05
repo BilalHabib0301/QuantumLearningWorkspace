@@ -81,6 +81,30 @@ class InMemoryCollection:
                 return type("DeleteResult", (), {"deleted_count": 1})()
         return type("DeleteResult", (), {"deleted_count": 0})()
 
+    async def update_one(self, query: Dict[str, Any], update: Dict[str, Any]):
+        set_fields = update.get("$set", {})
+        matched_count = 0
+        modified_count = 0
+        for doc in self.documents:
+            match = True
+            for k, v in query.items():
+                if k == "_id" and isinstance(v, ObjectId):
+                    if str(doc.get("_id")) != str(v) and doc.get("_id") != v:
+                        match = False
+                        break
+                elif doc.get(k) != v:
+                    match = False
+                    break
+            if match:
+                matched_count += 1
+                for field, val in set_fields.items():
+                    if doc.get(field) != val:
+                        doc[field] = val
+                        modified_count += 1
+                break
+        return type("UpdateResult", (), {"matched_count": matched_count, "modified_count": modified_count})()
+
+
 
 _in_memory_db: Dict[str, InMemoryCollection] = {
     "users": InMemoryCollection("users"),

@@ -23,6 +23,6 @@ class Upload(BaseModel):
     filename: str = Field(..., min_length=1)
     upload_date: datetime = Field(default_factory=datetime.utcnow)
     file_type: str = Field(..., min_length=1)
-    status: str = Field(default="uploaded")
+    status: str = Field(default="Processing")
     metadata: Optional[dict] = None
     user_id: str
