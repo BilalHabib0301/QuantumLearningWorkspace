@@ -14,13 +14,15 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 app = FastAPI(title="StudyMind AI Backend")
-app.include_router(chat_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(chat_router)
+
 
 UPLOAD_DIRECTORY = "uploaded_files"
 
