@@ -10,6 +10,9 @@ from auth_utils import hash_password, verify_password, create_access_token, get_
 from routes.chat import router as chat_router
 from bson import ObjectId
 
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+
 app = FastAPI(title="StudyMind AI Backend")
 app.include_router(chat_router)
 app.add_middleware(

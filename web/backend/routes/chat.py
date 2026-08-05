@@ -7,7 +7,8 @@ from typing import Optional, List, Dict
 
 router = APIRouter()
 
-# ---- Request / Response shapes (matches Team Mu's real /ask contract) ----
+
+# ---------------- Request Models ---------------- #
 
 class HistoryMessage(BaseModel):
     role: str
@@ -70,46 +71,12 @@ def mock_ask(request: AskRequest, req: Request, res: Response):
     if len(timestamps) >= RATE_LIMIT:
         retry_after = int(WINDOW_SECONDS - (now - timestamps[0]))
         raise HTTPException(
-            status_code=429,
-            detail="Rate limit exceeded",
-            headers={"Retry-After": str(max(retry_after, 1))},
+            status_code=e.response.status_code,
+            detail=e.response.text,
         )
 
-    timestamps.append(now)
-
-    if not request.question.strip():
-        raise HTTPException(status_code=400, detail="question must not be empty")
-
-    # Clamp top_k between 1 and 8
-    top_k = request.top_k or 4
-    top_k = max(1, min(top_k, 8))
-
-    # Fake timings for now — real backend will report actual numbers
-    timing = {"retrieval_ms": 50, "llm_ms": 300, "grounding_ms": 20, "total_ms": 370}
-
-    res.headers["X-Cache-Hit"] = "false"
-    res.headers["X-Retrieval-Ms"] = str(timing["retrieval_ms"])
-    res.headers["X-Llm-Ms"] = str(timing["llm_ms"])
-    res.headers["X-Total-Ms"] = str(timing["total_ms"])
-
-    sources = []
-    source_ids = []
-    if request.include_sources:
-        sources = [{"document": "sample.pdf", "chunk": "chunk_1"}]
-        source_ids = ["sample.pdf#chunk_1"]
-
-    hop_queries = [request.question] if request.multi_hop else []
-
-    return {
-        "answer": f"This is a placeholder answer for: '{request.question}'",
-        "refused": False,
-        "sources": sources,
-        "source_ids": source_ids,
-        "rewritten_question": request.question,
-        "grounded": True,
-        "retrieval_rounds": 1,
-        "hop_queries": hop_queries,
-        "conflict_hint": None,
-        "cached": False,
-        "timing": timing,
-    }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=str(e),
+        )

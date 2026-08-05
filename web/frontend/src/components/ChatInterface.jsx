@@ -75,25 +75,36 @@ export default function ChatInterface() {
     setIsLoading(true);
 
     // Format chat history for the API contract
-    const apiHistory = messages.map(msg => ({
-      role: msg.role === "assistant" ? "assistant" : "user",
-      content: msg.content
-    }));
+    const apiHistory = messages
+  .filter(
+    (msg) =>
+      typeof msg.content === "string" &&
+      msg.content.trim().length > 0
+  )
+  .map((msg) => ({
+    role: msg.role === "assistant" ? "assistant" : "user",
+    content: msg.content,
+  }));
 
     try {
-      const response = await fetch("http://localhost:8000/ask", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          question: userMessage.content,
-          history: apiHistory,
-          top_k: 4,
-          include_sources: true
-        })
-      });
+      const userId = getEmailFromToken(token) || "guest";
+
+const response = await fetch("http://127.0.0.1:8000/ask", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-User-Id": getEmailFromToken(token) || "guest"
+},
+  body: JSON.stringify({
+    question: userMessage.content,
+    history: apiHistory,
+    top_k: 4,
+    include_sources: true,
+    rerank: true,
+    multi_hop: true,
+    skip_cache: false
+})
+});
 
       if (handle401(response)) return;
 
