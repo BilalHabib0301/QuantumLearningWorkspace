@@ -356,7 +356,7 @@ function DocumentsView({ onAskAboutDocument }) {
 
                   <button
                     className="btn-delete-file"
-                    onClick={() => handleDelete(file.id)}
+                    onClick={() => handleDelete(file.id, file.filename)}
                     disabled={isDeleting}
                     title="Delete file"
                   >
