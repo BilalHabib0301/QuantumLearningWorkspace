@@ -92,12 +92,13 @@ function DocumentsView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [fileToDelete, setFileToDelete] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadMsg, setUploadMsg] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = `http://${window.location.hostname}:8001`;
 
   function fetchUploads() {
     setLoading(true);
@@ -300,22 +301,22 @@ function DocumentsView() {
                     {file.status || "Processed"}
                   </div>
                   <button
-  className="btn-delete-file"
-  onClick={() => handleDelete(file.id)}
-  disabled={isDeleting}
-  title="Delete file"
->
-  {isDeleting ? (
-    <span className="mini-spinner"></span>
-  ) : (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#ef4444" }}>
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-  )}
-</button>
+                    className="btn-delete-file"
+                    onClick={() => setFileToDelete(file)}
+                    disabled={isDeleting}
+                    title="Delete file"
+                  >
+                    {isDeleting ? (
+                      <span className="mini-spinner"></span>
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#ef4444" }}>
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    )}
+                  </button>
 
                 </div>
               );
@@ -323,6 +324,51 @@ function DocumentsView() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {fileToDelete && (
+        <div className="modal-backdrop" onClick={() => setFileToDelete(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="modal-close-btn"
+              onClick={() => setFileToDelete(null)}
+              title="Close"
+            >
+              ✕
+            </button>
+            <div className="modal-icon-wrap">
+              <span className="modal-warning-icon">⚠️</span>
+            </div>
+            <h3 className="modal-title">Delete Document</h3>
+            <p className="modal-desc">
+              Are you sure you want to delete <strong className="modal-filename">"{fileToDelete.filename}"</strong>?
+            </p>
+            <p className="modal-subtext">
+              This action is <strong>irreversible</strong> and cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="modal-btn-cancel"
+                onClick={() => setFileToDelete(null)}
+                disabled={deletingId === fileToDelete.id}
+              >
+                Cancel
+              </button>
+              <button
+                className="modal-btn-delete"
+                onClick={() => {
+                  const idToDelete = fileToDelete.id;
+                  setFileToDelete(null);
+                  handleDelete(idToDelete);
+                }}
+                disabled={deletingId === fileToDelete.id}
+              >
+                {deletingId === fileToDelete.id ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -345,7 +391,7 @@ function ChatView() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = `http://${window.location.hostname}:8001`;
 
   // Save history
   useEffect(() => {
@@ -470,6 +516,12 @@ function ChatView() {
                 msg.role === "user" ? "bubble-user" : "bubble-ai"
               } ${msg.isError ? "bubble-error" : ""}`}
             >
+              {msg.role === "assistant" && (
+                <div className="msg-header">
+                  <span className="msg-sender-tag ai-tag">✦ AI</span>
+                </div>
+              )}
+
               <div className="msg-content">{msg.content}</div>
 
               {/* Sources */}
@@ -500,6 +552,9 @@ function ChatView() {
         {isLoading && (
           <div className="msg-wrapper msg-ai">
             <div className="msg-bubble bubble-ai typing-bubble">
+              <div className="typing-header">
+                <span className="typing-text">AI is typing</span>
+              </div>
               <div className="typing-dots">
                 <span></span><span></span><span></span>
               </div>
