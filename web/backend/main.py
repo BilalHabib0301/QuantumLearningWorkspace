@@ -13,6 +13,7 @@ from models import SignupRequest, LoginRequest, Upload
 from database import get_users_collection, get_uploads_collection
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email
 from routes.chat import router as chat_router
+from pypdf import PdfReader
 
 app = FastAPI(title="StudyMind AI Backend")
 app.add_middleware(
@@ -165,3 +166,59 @@ async def delete_upload(
     await uploads.delete_one(search_query)
 
     return {"message": "Upload deleted successfully"}
+
+@app.get("/uploads/{upload_id}/preview")
+async def get_document_preview(
+    upload_id: str,
+    current_user_email: str = Depends(get_current_user_email),
+):
+    uploads = get_uploads_collection()
+
+    try:
+        search_query = {"_id": ObjectId(upload_id), "user_id": current_user_email}
+    except Exception:
+        search_query = {"_id": upload_id, "user_id": current_user_email}
+
+    upload_doc = await uploads.find_one(search_query)
+
+    if not upload_doc:
+        raise HTTPException(status_code=404, detail="Upload not found")
+
+    filename = upload_doc["filename"]
+    file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+
+    # File size (in MB, human readable)
+    file_size = None
+    if os.path.exists(file_path):
+        size_bytes = os.path.getsize(file_path)
+        file_size = f"{size_bytes / (1024 * 1024):.2f} MB"
+
+    # Page count + word count (PDFs only, best-effort — never break the request)
+    page_count = None
+    word_count = None
+    if filename.lower().endswith(".pdf") and os.path.exists(file_path):
+        try:
+            reader = PdfReader(file_path)
+            page_count = len(reader.pages)
+            text = ""
+            for page in reader.pages:
+                text += page.extract_text() or ""
+            if text.strip():
+                word_count = len(text.split())
+        except Exception:
+            # Scanned/corrupted PDF or extraction failure — leave as None,
+            # frontend will show a placeholder instead of crashing.
+            pass
+
+    file_type = filename.split(".")[-1].upper() if "." in filename else "FILE"
+
+    return {
+        "id": str(upload_doc["_id"]),
+        "filename": filename,
+        "upload_date": upload_doc["upload_date"],
+        "status": upload_doc.get("status", "Processing"),
+        "file_size": file_size,
+        "page_count": page_count,
+        "word_count": word_count,
+        "file_type": file_type,
+    }
