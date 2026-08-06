@@ -3,6 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import SettingsView from "./SettingsView.jsx";
 import "./Dashboard.css";
+import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
 
 // ─── Sub-Components ──────────────────────────────────────────────────────────
 
@@ -111,6 +112,7 @@ function DocumentsView({ onAskAboutDocument }) {
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadMsg, setUploadMsg] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
+  const [previewId, setPreviewId] = useState(null);
 
   const API_BASE = "http://localhost:8000";
 
@@ -204,7 +206,6 @@ function DocumentsView({ onAskAboutDocument }) {
 
   useEffect(() => {
     fetchUploads();
-    // Poll every 3 seconds to synchronize real-time file processing status
     const interval = setInterval(() => {
       fetchUploads(true);
     }, 3000);
@@ -292,7 +293,6 @@ function DocumentsView({ onAskAboutDocument }) {
               const isProcessing = statusRaw === "processing";
               const displayStatus = isProcessing ? "Processing" : "Ready";
 
-              // Clean file type badge
               const getFileType = (mime, filename) => {
                 if (mime && mime.includes("/")) {
                   const subtype = mime.split("/")[1]?.split(".")[0].toUpperCase() || "";
@@ -327,14 +327,20 @@ function DocumentsView({ onAskAboutDocument }) {
                         })
                       : "Unknown"}
                   </span>
-                  
-                  {/* Status Pill */}
+
                   <div className={`status-pill ${isProcessing ? "status-processing" : "status-ready"}`}>
                     <span className={`status-dot ${isProcessing ? "pulse-dot" : "solid-dot"}`}></span>
                     {displayStatus}
                   </div>
 
-                  {/* Ask about this document option */}
+                  <button
+                    className="btn-preview-file"
+                    onClick={() => setPreviewId(file.id)}
+                    title="Preview document details"
+                  >
+                    👁️
+                  </button>
+
                   <button
                     className={`btn-ask-doc ${isProcessing ? "disabled" : ""}`}
                     onClick={() => !isProcessing && onAskAboutDocument(file.filename)}
@@ -348,7 +354,6 @@ function DocumentsView({ onAskAboutDocument }) {
                     💬 Ask AI
                   </button>
 
-                  {/* Delete Button */}
                   <button
                     className="btn-delete-file"
                     onClick={() => handleDelete(file.id)}
@@ -372,10 +377,17 @@ function DocumentsView({ onAskAboutDocument }) {
           </div>
         )}
       </div>
+
+      {/* Preview Modal */}
+      {previewId && (
+        <DocumentPreviewModal
+          uploadId={previewId}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
     </div>
   );
 }
-
 function ChatView({ targetDocument, setTargetDocument }) {
   const { token, handle401 } = useAuth();
   const [files, setFiles] = useState([]);
