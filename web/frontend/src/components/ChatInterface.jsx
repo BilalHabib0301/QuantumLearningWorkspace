@@ -2,7 +2,6 @@ import { useState, useEffect, useRef } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import "./ChatInterface.css";
 
-// Helper to decode JWT token and extract email
 const getEmailFromToken = (token) => {
   if (!token) return null;
   try {
@@ -26,8 +25,10 @@ const getStorageKey = (token) => {
   return email ? `studymind_chat_history_${email}` : "studymind_chat_history_guest";
 };
 
-export default function ChatInterface() {
+export default function ChatInterface({ onBack }) {
   const { token, handle401 } = useAuth();
+  const [files, setFiles] = useState([]);
+  const [selectedDoc, setSelectedDoc] = useState(null);
   const [messages, setMessages] = useState(() => {
     const key = getStorageKey(token);
     const saved = localStorage.getItem(key);
@@ -45,13 +46,35 @@ export default function ChatInterface() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
+  const API_BASE = "http://localhost:8000";
+
+  // Fetch document uploads and poll status changes
+  function fetchUploads() {
+    fetch(`${API_BASE}/uploads`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (handle401(res)) return;
+        if (res.ok) return res.json();
+      })
+      .then((data) => {
+        if (data) setFiles(data);
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    fetchUploads();
+    const interval = setInterval(fetchUploads, 3000);
+    return () => clearInterval(interval);
+  }, [token]);
+
   // Save history to localStorage whenever it changes
   useEffect(() => {
     const key = getStorageKey(token);
     localStorage.setItem(key, JSON.stringify(messages));
   }, [messages, token]);
 
-  // Auto-scroll to the bottom when new messages arrive
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -74,43 +97,35 @@ export default function ChatInterface() {
     setInput("");
     setIsLoading(true);
 
-    // Format chat history for the API contract
     const apiHistory = messages
-  .filter(
-    (msg) =>
-      typeof msg.content === "string" &&
-      msg.content.trim().length > 0
-  )
-  .map((msg) => ({
-    role: msg.role === "assistant" ? "assistant" : "user",
-    content: msg.content,
-  }));
+      .filter((msg) => typeof msg.content === "string" && msg.content.trim().length > 0)
+      .map((msg) => ({
+        role: msg.role === "assistant" ? "assistant" : "user",
+        content: msg.content,
+      }));
 
     try {
-      const userId = getEmailFromToken(token) || "guest";
-
-const response = await fetch("http://127.0.0.1:8000/ask", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json",
-    "X-User-Id": getEmailFromToken(token) || "guest"
-},
-  body: JSON.stringify({
-    question: userMessage.content,
-    history: apiHistory,
-    top_k: 4,
-    include_sources: true,
-    rerank: true,
-    multi_hop: true,
-    skip_cache: false
-})
-});
+      const response = await fetch(`${API_BASE}/ask`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-User-Id": getEmailFromToken(token) || "guest",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          question: userMessage.content,
+          history: apiHistory,
+          top_k: 4,
+          include_sources: true,
+          rerank: true,
+          multi_hop: true,
+          skip_cache: false,
+          filename: selectedDoc || null,
+        })
+      });
 
       if (handle401(response)) return;
-
-      if (!response.ok) {
-        throw new Error("Failed to connect to AI server");
-      }
+      if (!response.ok) throw new Error("Failed to connect to AI server");
 
       const data = await response.json();
       
@@ -164,11 +179,36 @@ const response = await fetch("http://127.0.0.1:8000/ask", {
     <div className="chat-interface">
       <div className="chat-header">
         <div className="chat-header-info">
+          {onBack && (
+            <button className="btn-back-nav" onClick={onBack} title="Back to Dashboard">
+              ← Dashboard
+            </button>
+          )}
           <h3>AI Tutor Chat</h3>
           <span className="chat-status">
             <span className="status-dot"></span> Online
           </span>
         </div>
+
+        {/* Document Selector Dropdown (Disables files still processing) */}
+        <div className="chat-header-doc-selector">
+          <select
+            value={selectedDoc || ""}
+            onChange={(e) => setSelectedDoc(e.target.value || null)}
+            className="header-doc-select"
+          >
+            <option value="">All Searchable Documents</option>
+            {files.map((file) => {
+              const isProcessing = (file.status || "").toLowerCase() === "processing";
+              return (
+                <option key={file.id} value={file.filename} disabled={isProcessing}>
+                  {file.filename} {isProcessing ? "⏳ (Processing - Not Searchable)" : "✓ (Ready)"}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+
         <button className="btn-clear" onClick={clearHistory} title="Clear history">
           🗑️ Clear
         </button>
@@ -183,7 +223,7 @@ const response = await fetch("http://127.0.0.1:8000/ask", {
             <div className={`message-bubble ${msg.role === "user" ? "user-bubble" : "assistant-bubble"} ${msg.isError ? "error-bubble" : ""}`}>
               <div className="message-content">{msg.content}</div>
               
-              {/* Show sources if present (Premium feature) */}
+              {/* Show sources if present */}
               {msg.sources && msg.sources.length > 0 && (
                 <div className="message-sources">
                   <span className="sources-title">🔍 Sources:</span>
@@ -197,7 +237,7 @@ const response = await fetch("http://127.0.0.1:8000/ask", {
                 </div>
               )}
 
-              {/* Show generation time if present */}
+              {/* Show generation time */}
               {msg.timing && (
                 <div className="message-meta-info">
                   Grounded in {msg.timing.total_ms}ms (LLM: {msg.timing.llm_ms}ms)
@@ -227,7 +267,7 @@ const response = await fetch("http://127.0.0.1:8000/ask", {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question about your documents... (Press Enter to send)"
+          placeholder={selectedDoc ? `Ask about ${selectedDoc}...` : "Ask a question about your documents... (Press Enter to send)"}
           rows={1}
         />
         <button type="submit" className="chat-send-btn" disabled={!input.trim() || isLoading}>

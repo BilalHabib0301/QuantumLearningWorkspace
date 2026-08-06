@@ -23,6 +23,8 @@ class AskRequest(BaseModel):
     rerank: Optional[bool] = True
     multi_hop: Optional[bool] = True
     skip_cache: Optional[bool] = False
+    filename: Optional[str] = None
+    document_id: Optional[str] = None
 
 
 class Source(BaseModel):
@@ -71,12 +73,33 @@ def mock_ask(request: AskRequest, req: Request, res: Response):
     if len(timestamps) >= RATE_LIMIT:
         retry_after = int(WINDOW_SECONDS - (now - timestamps[0]))
         raise HTTPException(
-            status_code=e.response.status_code,
-            detail=e.response.text,
+            status_code=429,
+            detail=f"Rate limit exceeded. Try again in {retry_after}s",
         )
 
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=str(e),
-        )
+    timestamps.append(now)
+
+    doc_label = request.filename if request.filename else "your study materials"
+    sources = [
+        Source(document=doc_label, chunk=f"Extracted content relevant to: {request.question}"),
+        Source(document=doc_label, chunk="Additional concept details and reference notes."),
+    ]
+
+    return AskResponse(
+        answer=f"Based on {doc_label}: Here is the breakdown for '{request.question}'.",
+        refused=False,
+        sources=sources,
+        source_ids=["src_1", "src_2"],
+        rewritten_question=request.question,
+        grounded=True,
+        retrieval_rounds=1,
+        hop_queries=[request.question],
+        conflict_hint=None,
+        cached=False,
+        timing=Timing(
+            retrieval_ms=110,
+            llm_ms=380,
+            grounding_ms=45,
+            total_ms=535,
+        ),
+    )
