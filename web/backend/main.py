@@ -1,28 +1,47 @@
 import os
 import shutil
+import asyncio
+from typing import Optional
+from bson import ObjectId
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
 
 from models import SignupRequest, LoginRequest, Upload
 from database import get_users_collection, get_uploads_collection
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email
 from routes.chat import router as chat_router
-from bson import ObjectId
-
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
 
 app = FastAPI(title="StudyMind AI Backend")
-app.include_router(chat_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+app.include_router(chat_router)
+
 UPLOAD_DIRECTORY = "uploaded_files"
+
+
+async def process_file_ingestion(file_id, filename: str, user_id: str):
+    """Background task simulating ingestion pipeline (parsing, chunking, embedding)."""
+    await asyncio.sleep(4)  # Simulate ingestion progress from pipeline
+    uploads = get_uploads_collection()
+    query = {"user_id": user_id}
+    if file_id:
+        try:
+            query["_id"] = ObjectId(str(file_id))
+        except Exception:
+            query["filename"] = filename
+    else:
+        query["filename"] = filename
+
+    await uploads.update_one(query, {"$set": {"status": "Ready"}})
 
 
 @app.get("/health")
@@ -68,6 +87,7 @@ async def login(request: LoginRequest):
 
 @app.post("/upload")
 async def upload_file(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     current_user_email: str = Depends(get_current_user_email),
 ):
@@ -81,16 +101,26 @@ async def upload_file(
         filename=file.filename,
         file_type=file.content_type,
         user_id=current_user_email,
+        status="Processing",
     )
 
     uploads = get_uploads_collection()
-    await uploads.insert_one(upload_record.model_dump())
+    result = await uploads.insert_one(upload_record.model_dump())
+    inserted_id = getattr(result, "inserted_id", None)
+
+    background_tasks.add_task(
+        process_file_ingestion,
+        file_id=inserted_id,
+        filename=file.filename,
+        user_id=current_user_email,
+    )
 
     return {
-        "message": "File uploaded successfully.",
+        "message": "File uploaded successfully and ingestion pipeline started.",
         "filename": upload_record.filename,
         "status": upload_record.status,
     }
+
 
 @app.get("/uploads")
 async def get_uploads(current_user_email: str = Depends(get_current_user_email)):
@@ -105,10 +135,11 @@ async def get_uploads(current_user_email: str = Depends(get_current_user_email))
             "filename": document["filename"],
             "upload_date": document["upload_date"],
             "file_type": document["file_type"],
-            "status": document["status"],
+            "status": document.get("status", "Processing"),
         })
 
     return user_uploads
+
 
 @app.delete("/uploads/{upload_id}")
 async def delete_upload(
@@ -117,10 +148,12 @@ async def delete_upload(
 ):
     uploads = get_uploads_collection()
 
-    upload_doc = await uploads.find_one({
-        "_id": ObjectId(upload_id),
-        "user_id": current_user_email,
-    })
+    try:
+        search_query = {"_id": ObjectId(upload_id), "user_id": current_user_email}
+    except Exception:
+        search_query = {"_id": upload_id, "user_id": current_user_email}
+
+    upload_doc = await uploads.find_one(search_query)
 
     if not upload_doc:
         raise HTTPException(status_code=404, detail="Upload not found")
@@ -129,6 +162,6 @@ async def delete_upload(
     if os.path.exists(file_path):
         os.remove(file_path)
 
-    await uploads.delete_one({"_id": ObjectId(upload_id)})
+    await uploads.delete_one(search_query)
 
     return {"message": "Upload deleted successfully"}
