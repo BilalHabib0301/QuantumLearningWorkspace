@@ -25,6 +25,43 @@
   margin-bottom: 0.15rem;
 }
 
+.chat-header-doc-selector {
+  margin: 0 12px;
+}
+
+.header-doc-select {
+  background: rgba(30, 30, 50, 0.8);
+  border: 1px solid rgba(124, 58, 237, 0.4);
+  color: #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  outline: none;
+  cursor: pointer;
+}
+
+.header-doc-select option {
+  background: #121222;
+  color: #e2e8f0;
+}
+
+.header-doc-select option:disabled {
+  color: #64748b;
+  font-style: italic;
+}
+
+.btn-back-nav {
+  background: rgba(124, 58, 237, 0.15);
+  border: 1px solid rgba(124, 58, 237, 0.3);
+  color: #c084fc;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  margin-bottom: 6px;
+  display: inline-block;
+}
+
 .chat-status {
   display: flex;
   align-items: center;
