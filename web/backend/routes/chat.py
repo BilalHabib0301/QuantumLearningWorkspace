@@ -68,15 +68,37 @@ def mock_ask(request: AskRequest, req: Request, res: Response):
     while timestamps and timestamps[0] < now - WINDOW_SECONDS:
         timestamps.popleft()
 
-    if len(timestamps) >= RATE_LIMIT:
-        retry_after = int(WINDOW_SECONDS - (now - timestamps[0]))
-        raise HTTPException(
-            status_code=e.response.status_code,
-            detail=e.response.text,
-        )
+    try:
+        if len(timestamps) >= RATE_LIMIT:
+            retry_after = int(WINDOW_SECONDS - (now - timestamps[0]))
+            raise HTTPException(
+                status_code=429,
+                detail="Rate limit exceeded",
+                headers={"Retry-After": str(retry_after)},
+            )
 
+        timestamps.append(now)
+        return AskResponse(
+            answer="Mock response",
+            refused=False,
+            sources=[],
+            source_ids=[],
+            rewritten_question=request.question,
+            grounded=False,
+            retrieval_rounds=0,
+            hop_queries=[],
+            cached=False,
+            timing=Timing(
+                retrieval_ms=0,
+                llm_ms=0,
+                grounding_ms=0,
+                total_ms=0,
+            ),
+        )
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(
             status_code=500,
             detail=str(e),
-        )
+        ) from e
