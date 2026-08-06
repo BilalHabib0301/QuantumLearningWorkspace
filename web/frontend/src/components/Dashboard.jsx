@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
 import SettingsView from "./SettingsView.jsx";
 import "./Dashboard.css";
 
@@ -101,6 +102,7 @@ function TopBar({ activeTab }) {
 
 function DocumentsView({ onAskAboutDocument }) {
   const { token, handle401 } = useAuth();
+  const { showToast } = useToast();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -165,19 +167,21 @@ function DocumentsView({ onAskAboutDocument }) {
         if (!data) return;
         setUploadMsg(`"${selectedFile.name}" uploaded successfully! Processing started...`);
         setUploadStatus("success");
+        showToast(`"${selectedFile.name}" uploaded successfully!`, "success");
         setSelectedFile(null);
         fetchUploads(true);
       })
       .catch((err) => {
         setUploadMsg(err.message || "Something went wrong.");
         setUploadStatus("error");
+        showToast(err.message || "Upload failed", "error");
       })
       .finally(() => {
         setUploading(false);
       });
   }
 
-  function handleDelete(uploadId) {
+  function handleDelete(uploadId, filename) {
     setDeletingId(uploadId);
     fetch(`${API_BASE}/uploads/${uploadId}`, {
       method: "DELETE",
@@ -187,9 +191,11 @@ function DocumentsView({ onAskAboutDocument }) {
         if (handle401(res)) return;
         if (!res.ok) throw new Error("Failed to delete file");
         setFiles((prev) => prev.filter((f) => f.id !== uploadId));
+        showToast(`"${filename}" deleted`, "success");
       })
       .catch((err) => {
         setError(err.message);
+        showToast(err.message || "Failed to delete file", "error");
       })
       .finally(() => {
         setDeletingId(null);
