@@ -391,23 +391,70 @@ function DocumentsView({ onAskAboutDocument }) {
 function ChatView({ targetDocument, setTargetDocument }) {
   const { token, handle401 } = useAuth();
   const [files, setFiles] = useState([]);
-  const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem("studymind_chat_history");
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            role: "assistant",
-            content:
-              "Hello! I'm your StudyMind AI assistant. Select a document or ask me anything about your uploaded study materials.",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ];
-  });
+  const [messages, setMessages] = useState([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const API_BASE = "http://localhost:8000";
+
+  const welcomeMessage = {
+    role: "assistant",
+    content:
+      "Hello! I'm your StudyMind AI assistant. Select a document or ask me anything about your uploaded study materials.",
+    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+
+  // Load past conversation from the backend when the chat page opens
+  useEffect(() => {
+    fetch(`${API_BASE}/chat-history`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (handle401(res)) return;
+        if (!res.ok) throw new Error("Failed to load chat history");
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.length > 0) {
+          const formatted = data.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+            sources: msg.sources || [],
+            timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          }));
+          setMessages(formatted);
+        } else {
+          setMessages([welcomeMessage]);
+        }
+        setHistoryLoaded(true);
+      })
+      .catch(() => {
+        setMessages([welcomeMessage]);
+        setHistoryLoaded(true);
+      });
+  }, [token]);
+
+  // Save one message to the backend (fire-and-forget)
+  function saveMessage(message) {
+    fetch(`${API_BASE}/chat-history`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        role: message.role,
+        content: message.content,
+        sources: message.sources || null,
+      }),
+    }).catch(() => {
+      // Silent fail — losing a history save shouldn't break the chat UX
+    });
+  }
 
   // Fetch uploads to populate document scope selector
   function fetchUploads() {
@@ -430,11 +477,6 @@ function ChatView({ targetDocument, setTargetDocument }) {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Save history
-  useEffect(() => {
-    localStorage.setItem("studymind_chat_history", JSON.stringify(messages));
-  }, [messages]);
-
   const scrollToBottom = () => {
     const container = document.getElementById("chat-messages-scroll");
     if (container) container.scrollTop = container.scrollHeight;
@@ -455,6 +497,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    saveMessage(userMessage);
     setInput("");
     setIsLoading(true);
 
@@ -493,16 +536,15 @@ function ChatView({ targetDocument, setTargetDocument }) {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      saveMessage(assistantMessage);
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I had trouble reaching the AI server. Please make sure the backend is running.",
-          isError: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
+      const errorMessage = {
+        role: "assistant",
+        content: "Sorry, I had trouble reaching the AI server. Please make sure the backend is running.",
+        isError: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -517,16 +559,17 @@ function ChatView({ targetDocument, setTargetDocument }) {
 
   const clearHistory = () => {
     if (window.confirm("Are you sure you want to clear your conversation history?")) {
-      const initial = [
-        {
-          role: "assistant",
-          content:
-            "Hello! I'm your StudyMind AI assistant. Ask me anything about your uploaded study materials, and I'll find the answers for you.",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ];
-      setMessages(initial);
-      localStorage.removeItem("studymind_chat_history");
+      fetch(`${API_BASE}/chat-history`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          if (handle401(res)) return;
+          setMessages([welcomeMessage]);
+        })
+        .catch(() => {
+          setMessages([welcomeMessage]);
+        });
     }
   };
 
@@ -545,11 +588,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
             {files.map((file) => {
               const isProcessing = (file.status || "").toLowerCase() === "processing";
               return (
-                <option
-                  key={file.id}
-                  value={file.filename}
-                  disabled={isProcessing}
-                >
+                <option key={file.id} value={file.filename} disabled={isProcessing}>
                   {file.filename} {isProcessing ? "⏳ (Processing - Not Searchable)" : "✓ (Ready)"}
                 </option>
               );
@@ -577,52 +616,48 @@ function ChatView({ targetDocument, setTargetDocument }) {
         </div>
       </div>
 
-      {/* Target Document Notification Banner */}
       {targetDocument && (
         <div className="target-doc-banner">
           <span>Asking specifically about <strong>"{targetDocument}"</strong></span>
         </div>
       )}
 
-      {/* Messages */}
       <div className="chat-messages-scroll" id="chat-messages-scroll">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`msg-wrapper ${msg.role === "user" ? "msg-user" : "msg-ai"}`}
-          >
-            <div
-              className={`msg-bubble ${
-                msg.role === "user" ? "bubble-user" : "bubble-ai"
-              } ${msg.isError ? "bubble-error" : ""}`}
-            >
-              <div className="msg-content">{msg.content}</div>
+        {!historyLoaded && <p className="modal-status-text">Loading conversation...</p>}
 
-              {/* Sources */}
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="msg-sources">
-                  <span className="sources-title">🔍 Sources:</span>
-                  <div className="sources-list">
-                    {msg.sources.map((src, i) => (
-                      <span key={i} className="source-chip" title={src.chunk}>
-                        {src.document}
+        {historyLoaded &&
+          messages.map((msg, index) => (
+            <div key={index} className={`msg-wrapper ${msg.role === "user" ? "msg-user" : "msg-ai"}`}>
+              <div
+                className={`msg-bubble ${
+                  msg.role === "user" ? "bubble-user" : "bubble-ai"
+                } ${msg.isError ? "bubble-error" : ""}`}
+              >
+                <div className="msg-content">{msg.content}</div>
+
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="msg-sources">
+                    <span className="sources-title">🔍 Sources:</span>
+                    <div className="sources-list">
+                      {msg.sources.map((src, i) => (
+                        <span key={i} className="source-chip" title={src.chunk}>
+                          {src.document}
+                        </span>
+                      ))}
+                    </div>
+                    {msg.timing && (
+                      <span className="source-speed">
+                        Grounded in {msg.timing.total_ms}ms (LLM: {msg.timing.llm_ms}ms)
                       </span>
-                    ))}
+                    )}
                   </div>
-                  {msg.timing && (
-                    <span className="source-speed">
-                      Grounded in {msg.timing.total_ms}ms (LLM: {msg.timing.llm_ms}ms)
-                    </span>
-                  )}
-                </div>
-              )}
+                )}
 
-              <span className="msg-time">{msg.timestamp}</span>
+                <span className="msg-time">{msg.timestamp}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {/* Typing Indicator */}
         {isLoading && (
           <div className="msg-wrapper msg-ai">
             <div className="msg-bubble bubble-ai typing-bubble">
@@ -634,7 +669,6 @@ function ChatView({ targetDocument, setTargetDocument }) {
         )}
       </div>
 
-      {/* Input */}
       <form className="chat-input-bar" onSubmit={handleSend}>
         <input
           type="text"
