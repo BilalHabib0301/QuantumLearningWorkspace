@@ -15,6 +15,9 @@ from auth_utils import hash_password, verify_password, create_access_token, get_
 from routes.chat import router as chat_router
 from pypdf import PdfReader
 
+from models import SignupRequest, LoginRequest, Upload, ChatMessage
+from database import get_users_collection, get_uploads_collection, get_chat_history_collection
+
 app = FastAPI(title="StudyMind AI Backend")
 app.add_middleware(
     CORSMiddleware,
@@ -222,3 +225,47 @@ async def get_document_preview(
         "word_count": word_count,
         "file_type": file_type,
     }
+
+@app.post("/chat-history")
+async def save_chat_message(
+    message: dict,
+    current_user_email: str = Depends(get_current_user_email),
+):
+    """Save one chat message (either a user question or an assistant answer)."""
+    chat_history = get_chat_history_collection()
+
+    record = ChatMessage(
+        user_id=current_user_email,
+        role=message.get("role"),
+        content=message.get("content"),
+        sources=message.get("sources"),
+    )
+
+    await chat_history.insert_one(record.model_dump())
+    return {"message": "saved"}
+
+
+@app.get("/chat-history")
+async def get_chat_history(current_user_email: str = Depends(get_current_user_email)):
+    """Return this user's past conversation, oldest first."""
+    chat_history = get_chat_history_collection()
+    cursor = chat_history.find({"user_id": current_user_email}).sort("timestamp", 1)
+
+    messages = []
+    async for doc in cursor:
+        messages.append({
+            "role": doc["role"],
+            "content": doc["content"],
+            "sources": doc.get("sources"),
+            "timestamp": doc["timestamp"],
+        })
+
+    return messages
+
+
+@app.delete("/chat-history")
+async def clear_chat_history(current_user_email: str = Depends(get_current_user_email)):
+    """Delete this user's entire conversation history."""
+    chat_history = get_chat_history_collection()
+    await chat_history.delete_many({"user_id": current_user_email})
+    return {"message": "cleared"}

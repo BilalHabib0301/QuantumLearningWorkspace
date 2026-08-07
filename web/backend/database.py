@@ -152,6 +152,8 @@ def get_uploads_collection():
         return db["uploads"]
     return db["uploads"]
 
+def get_chat_history_collection():
+    return get_database()["chat_history"]
 
 def get_users_collection():
     """Return the users collection used by the app."""
