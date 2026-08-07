@@ -26,3 +26,10 @@ class Upload(BaseModel):
     status: str = Field(default="Processing")
     metadata: Optional[dict] = None
     user_id: str
+
+class ChatMessage(BaseModel):
+    user_id: str
+    role: str  # "user" or "assistant"
+    content: str
+    sources: Optional[list] = None
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
