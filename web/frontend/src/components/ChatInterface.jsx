@@ -105,7 +105,6 @@ export default function ChatInterface({ onBack }) {
       }));
 
     try {
-      const response = await fetch(`http://${window.location.hostname}:8001/ask`, {
       const response = await fetch(`${API_BASE}/ask`, {
         method: "POST",
         headers: {

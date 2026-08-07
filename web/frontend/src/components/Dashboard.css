@@ -1154,8 +1154,8 @@
   position: fixed;
   inset: 0;
   background: rgba(5, 5, 16, 0.78);
-  backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;

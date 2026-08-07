@@ -115,7 +115,7 @@ function DocumentsView({ onAskAboutDocument }) {
   const [uploadStatus, setUploadStatus] = useState("");
   const [previewId, setPreviewId] = useState(null);
 
-  const API_BASE = `http://${window.location.hostname}:8001`;
+  const API_BASE = "http://localhost:8000";
 
   function fetchUploads(isSilent = false) {
     if (!isSilent) {
@@ -333,7 +333,6 @@ function DocumentsView({ onAskAboutDocument }) {
                     <span className={`status-dot ${isProcessing ? "pulse-dot" : "solid-dot"}`}></span>
                     {displayStatus}
                   </div>
-
                   <button
                     className="btn-preview-file"
                     onClick={() => setPreviewId(file.id)}
@@ -343,21 +342,6 @@ function DocumentsView({ onAskAboutDocument }) {
                   </button>
 
                   <button
-                    className="btn-delete-file"
-                    onClick={() => setFileToDelete(file)}
-                    disabled={isDeleting}
-                    title="Delete file"
-                  >
-                    {isDeleting ? (
-                      <span className="mini-spinner"></span>
-                    ) : (
-                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#ef4444" }}>
-                        <polyline points="3 6 5 6 21 6" />
-                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                        <line x1="10" y1="11" x2="10" y2="17" />
-                        <line x1="14" y1="11" x2="14" y2="17" />
-                      </svg>
-                    )}
                     className={`btn-ask-doc ${isProcessing ? "disabled" : ""}`}
                     onClick={() => !isProcessing && onAskAboutDocument(file.filename)}
                     disabled={isProcessing}
@@ -372,7 +356,7 @@ function DocumentsView({ onAskAboutDocument }) {
 
                   <button
                     className="btn-delete-file"
-                    onClick={() => handleDelete(file.id, file.filename)}
+                    onClick={() => setFileToDelete(file)}
                     disabled={isDeleting}
                     title="Delete file"
                   >
@@ -427,8 +411,9 @@ function DocumentsView({ onAskAboutDocument }) {
                 className="modal-btn-delete"
                 onClick={() => {
                   const idToDelete = fileToDelete.id;
+                  const idFilename = fileToDelete.filename;
                   setFileToDelete(null);
-                  handleDelete(idToDelete);
+                  handleDelete(idToDelete, idFilename);
                 }}
                 disabled={deletingId === fileToDelete.id}
               >
@@ -437,6 +422,8 @@ function DocumentsView({ onAskAboutDocument }) {
             </div>
           </div>
         </div>
+      )}
+
       {/* Preview Modal */}
       {previewId && (
         <DocumentPreviewModal
@@ -447,6 +434,7 @@ function DocumentsView({ onAskAboutDocument }) {
     </div>
   );
 }
+
 function ChatView({ targetDocument, setTargetDocument }) {
   const { token, handle401 } = useAuth();
   const [files, setFiles] = useState([]);
@@ -455,7 +443,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE = `http://${window.location.hostname}:8001`;
+ const API_BASE = "http://localhost:8000";
 
   const welcomeMessage = {
     role: "assistant",
