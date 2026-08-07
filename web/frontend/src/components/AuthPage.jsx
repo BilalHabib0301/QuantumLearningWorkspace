@@ -1,12 +1,14 @@
 import { useState } from "react";
+import { useAuth } from "../context/AuthContext.jsx";
 import "./AuthPage.css";
 
-function AuthPage({ initialMode = "login", onLoginSuccess }) {
+function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,6 +33,9 @@ function AuthPage({ initialMode = "login", onLoginSuccess }) {
       }
 
       if (mode === "login") {
+        if (data.access_token) {
+          login(data.access_token);
+        }
         onLoginSuccess?.(data.access_token);
         setMessage("Logged in successfully!");
       } else {
@@ -92,7 +97,14 @@ function AuthPage({ initialMode = "login", onLoginSuccess }) {
           </div>
         </div>
 
-        <a href="/" className="auth-back">← Back to homepage</a>
+        <button
+          type="button"
+          className="auth-back"
+          style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+          onClick={() => onBackToHome ? onBackToHome() : (window.location.href = "/")}
+        >
+          ← Back to homepage
+        </button>
       </div>
 
       <div className="auth-right">
