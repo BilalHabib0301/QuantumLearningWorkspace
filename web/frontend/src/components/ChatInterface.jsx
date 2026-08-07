@@ -105,6 +105,7 @@ export default function ChatInterface({ onBack }) {
       }));
 
     try {
+      const response = await fetch(`http://${window.location.hostname}:8001/ask`, {
       const response = await fetch(`${API_BASE}/ask`, {
         method: "POST",
         headers: {
@@ -221,6 +222,12 @@ export default function ChatInterface({ onBack }) {
             className={`message-wrapper ${msg.role === "user" ? "user-wrapper" : "assistant-wrapper"}`}
           >
             <div className={`message-bubble ${msg.role === "user" ? "user-bubble" : "assistant-bubble"} ${msg.isError ? "error-bubble" : ""}`}>
+              {msg.role === "assistant" && (
+                <div className="msg-header">
+                  <span className="msg-sender-tag ai-tag">✦ AI</span>
+                </div>
+              )}
+
               <div className="message-content">{msg.content}</div>
               
               {/* Show sources if present */}
@@ -251,6 +258,9 @@ export default function ChatInterface({ onBack }) {
         {isLoading && (
           <div className="message-wrapper assistant-wrapper">
             <div className="message-bubble assistant-bubble loading-bubble">
+              <div className="typing-header">
+                <span className="typing-text">AI is typing</span>
+              </div>
               <div className="typing-indicator">
                 <span></span>
                 <span></span>
