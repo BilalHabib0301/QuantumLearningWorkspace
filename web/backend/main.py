@@ -97,6 +97,9 @@ async def get_my_profile(current_user_email: str = Depends(get_current_user_emai
     uploads = get_uploads_collection()
     upload_count = await uploads.count_documents({"user_id": current_user_email})
 
+    chat_history = get_chat_history_collection()
+    question_count = await chat_history.count_documents({"user_id": current_user_email, "role": "user"})
+
     created_at = user.get("created_at") or user.get("created_date") or "July 2026"
     if isinstance(created_at, datetime):
         created_at = created_at.strftime("%B %d, %Y")
@@ -105,6 +108,7 @@ async def get_my_profile(current_user_email: str = Depends(get_current_user_emai
         "email": user["email"],
         "created_at": str(created_at),
         "document_count": upload_count,
+        "question_count": question_count,
     }
 
 

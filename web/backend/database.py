@@ -121,6 +121,7 @@ class InMemoryCollection:
 _in_memory_db: Dict[str, InMemoryCollection] = {
     "users": InMemoryCollection("users"),
     "uploads": InMemoryCollection("uploads"),
+    "chat_history": InMemoryCollection("chat_history"),
 }
 
 
@@ -165,7 +166,11 @@ def get_uploads_collection():
     return db["uploads"]
 
 def get_chat_history_collection():
-    return get_database()["chat_history"]
+    """Return the chat history collection used by the app."""
+    db = get_database()
+    if isinstance(db, dict):
+        return db["chat_history"]
+    return db["chat_history"]
 
 def get_users_collection():
     """Return the users collection used by the app."""
