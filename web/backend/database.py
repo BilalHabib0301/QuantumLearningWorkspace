@@ -104,6 +104,18 @@ class InMemoryCollection:
                 break
         return type("UpdateResult", (), {"matched_count": matched_count, "modified_count": modified_count})()
 
+    async def count_documents(self, query: Dict[str, Any]):
+        count = 0
+        for doc in self.documents:
+            match = True
+            for k, v in query.items():
+                if doc.get(k) != v:
+                    match = False
+                    break
+            if match:
+                count += 1
+        return count
+
 
 
 _in_memory_db: Dict[str, InMemoryCollection] = {
