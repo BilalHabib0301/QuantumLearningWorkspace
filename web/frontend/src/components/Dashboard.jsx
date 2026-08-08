@@ -97,6 +97,11 @@ function DocumentsView() {
   const [uploadMsg, setUploadMsg] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
 
+  // Search, Filter & Sort
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [sortOption, setSortOption] = useState("Newest");
+
   const API_BASE = "http://localhost:8000";
 
   function fetchUploads() {
@@ -182,6 +187,34 @@ function DocumentsView() {
     fetchUploads();
   }, [token]);
 
+  // Search, Filter & Sort
+  const displayedFiles = [...files]
+    .filter((file) => {
+      if (statusFilter === "All") return true;
+      return (file.status || "").toLowerCase() === statusFilter.toLowerCase();
+    })
+    .filter((file) =>
+      file.filename.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortOption) {
+        case "Newest":
+          return new Date(b.upload_date) - new Date(a.upload_date);
+
+        case "Oldest":
+          return new Date(a.upload_date) - new Date(b.upload_date);
+
+        case "A-Z":
+          return a.filename.localeCompare(b.filename);
+
+        case "Z-A":
+          return b.filename.localeCompare(a.filename);
+
+        default:
+          return 0;
+      }
+    });
+
   return (
     <div className="documents-view">
       {/* Upload Card */}
@@ -222,11 +255,39 @@ function DocumentsView() {
         <div className="file-list-header">
           <h3>Knowledge Library</h3>
           <div className="header-actions">
-            <span className="file-count-badge">{files.length} file{files.length !== 1 ? "s" : ""}</span>
+            <span className="file-count-badge">{displayedFiles.length} file{displayedFiles.length !== 1 ? "s" : ""}</span>
             <button className="btn-refresh" onClick={fetchUploads} title="Refresh">
               🔄
             </button>
           </div>
+        </div>
+
+        <div className="file-controls">
+          <input
+            type="text"
+            placeholder="Search by filename..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="All">All</option>
+            <option value="Processing">Processing</option>
+            <option value="Ready">Ready</option>
+          </select>
+
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+          >
+            <option value="Newest">Newest First</option>
+            <option value="Oldest">Oldest First</option>
+            <option value="A-Z">A-Z</option>
+            <option value="Z-A">Z-A</option>
+          </select>
         </div>
 
         {loading && (
@@ -256,7 +317,7 @@ function DocumentsView() {
 
         {!loading && !error && files.length > 0 && (
           <div className="file-rows">
-            {files.map((file) => {
+            {displayedFiles.map((file) => {
               const isDeleting = deletingId === file.id;
 
               // Clean file type: show PDF, DOCX, TXT etc. instead of long MIME types
