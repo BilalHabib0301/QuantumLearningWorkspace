@@ -1,16 +1,21 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import { useToast } from "../context/ToastContext.jsx";
+import SettingsView from "./SettingsView.jsx";
 import "./Dashboard.css";
+import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
 
 // ─── Sub-Components ──────────────────────────────────────────────────────────
 
 function SidebarNav({ activeTab, setActiveTab }) {
-  const { logout } = useAuth();
+  const { logout, userEmail } = useAuth();
+  const initial = userEmail ? userEmail[0].toUpperCase() : "U";
 
   const navItems = [
     { id: "documents", icon: "📄", label: "Documents" },
     { id: "chat", icon: "💬", label: "AI Chat" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
+    { id: "settings", icon: "⚙️", label: "Settings" },
   ];
 
   return (
@@ -38,15 +43,21 @@ function SidebarNav({ activeTab, setActiveTab }) {
 
       {/* Bottom: User + Logout */}
       <div className="sidebar-bottom">
-        <div className="user-avatar-circle">U</div>
+        <div
+          className="user-avatar-circle"
+          onClick={() => setActiveTab("settings")}
+          title={`${userEmail || "User"} (Click for Settings)`}
+          style={{ cursor: "pointer" }}
+        >
+          {initial}
+        </div>
         <button className="logout-icon-btn" onClick={logout} title="Logout">
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-    <polyline points="16 17 21 12 16 7" />
-    <line x1="21" y1="12" x2="9" y2="12" />
-  </svg>
-</button>
-
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
+          </svg>
+        </button>
       </div>
     </aside>
   );
@@ -65,6 +76,10 @@ function TopBar({ activeTab }) {
     graph: {
       title: "Knowledge Graph",
       subtitle: "Visualize connections between concepts in your materials",
+    },
+    settings: {
+      title: "Account Settings",
+      subtitle: "Manage your profile, session security, and workspace preferences",
     },
   };
 
@@ -86,36 +101,42 @@ function TopBar({ activeTab }) {
   );
 }
 
-function DocumentsView() {
-  const { token } = useAuth();
+function DocumentsView({ onAskAboutDocument }) {
+  const { token, handle401 } = useAuth();
+  const { showToast } = useToast();
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deletingId, setDeletingId] = useState(null);
+  const [fileToDelete, setFileToDelete] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [selectedFile, setSelectedFile] = useState(null);
   const [uploadMsg, setUploadMsg] = useState("");
   const [uploadStatus, setUploadStatus] = useState("");
+  const [previewId, setPreviewId] = useState(null);
 
   const API_BASE = "http://localhost:8000";
 
-  function fetchUploads() {
-    setLoading(true);
-    setError("");
+  function fetchUploads(isSilent = false) {
+    if (!isSilent) {
+      setLoading(true);
+      setError("");
+    }
     fetch(`${API_BASE}/uploads`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
+        if (handle401(res)) return;
         if (!res.ok) throw new Error("Failed to fetch uploads");
         return res.json();
       })
       .then((data) => {
-        setFiles(data);
-        setLoading(false);
+        if (data) setFiles(data);
+        if (!isSilent) setLoading(false);
       })
       .catch((err) => {
-        setError(err.message);
-        setLoading(false);
+        if (!isSilent) setError(err.message);
+        if (!isSilent) setLoading(false);
       });
   }
 
@@ -138,40 +159,46 @@ function DocumentsView() {
       body: formData,
     })
       .then(async (res) => {
+        if (handle401(res)) return;
         if (!res.ok) {
           const errData = await res.json().catch(() => ({}));
           throw new Error(errData.detail || "Upload failed");
         }
         return res.json();
       })
-      .then(() => {
-        setUploadMsg(`"${selectedFile.name}" uploaded successfully!`);
+      .then((data) => {
+        if (!data) return;
+        setUploadMsg(`"${selectedFile.name}" uploaded successfully! Processing started...`);
         setUploadStatus("success");
+        showToast(`"${selectedFile.name}" uploaded successfully!`, "success");
         setSelectedFile(null);
-        setUploadStatus("");
-        fetchUploads();
+        fetchUploads(true);
       })
       .catch((err) => {
         setUploadMsg(err.message || "Something went wrong.");
         setUploadStatus("error");
+        showToast(err.message || "Upload failed", "error");
       })
       .finally(() => {
         setUploading(false);
       });
   }
 
-  function handleDelete(uploadId) {
+  function handleDelete(uploadId, filename) {
     setDeletingId(uploadId);
     fetch(`${API_BASE}/uploads/${uploadId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((res) => {
+        if (handle401(res)) return;
         if (!res.ok) throw new Error("Failed to delete file");
         setFiles((prev) => prev.filter((f) => f.id !== uploadId));
+        showToast(`"${filename}" deleted`, "success");
       })
       .catch((err) => {
         setError(err.message);
+        showToast(err.message || "Failed to delete file", "error");
       })
       .finally(() => {
         setDeletingId(null);
@@ -180,6 +207,11 @@ function DocumentsView() {
 
   useEffect(() => {
     fetchUploads();
+    const interval = setInterval(() => {
+      fetchUploads(true);
+    }, 3000);
+
+    return () => clearInterval(interval);
   }, [token]);
 
   return (
@@ -223,7 +255,7 @@ function DocumentsView() {
           <h3>Knowledge Library</h3>
           <div className="header-actions">
             <span className="file-count-badge">{files.length} file{files.length !== 1 ? "s" : ""}</span>
-            <button className="btn-refresh" onClick={fetchUploads} title="Refresh">
+            <button className="btn-refresh" onClick={() => fetchUploads(false)} title="Refresh">
               🔄
             </button>
           </div>
@@ -242,7 +274,7 @@ function DocumentsView() {
         {!loading && error && (
           <div className="error-state">
             <p>{error}</p>
-            <button onClick={fetchUploads}>Retry</button>
+            <button onClick={() => fetchUploads(false)}>Retry</button>
           </div>
         )}
 
@@ -258,8 +290,10 @@ function DocumentsView() {
           <div className="file-rows">
             {files.map((file) => {
               const isDeleting = deletingId === file.id;
+              const statusRaw = (file.status || "Ready").toLowerCase();
+              const isProcessing = statusRaw === "processing";
+              const displayStatus = isProcessing ? "Processing" : "Ready";
 
-              // Clean file type: show PDF, DOCX, TXT etc. instead of long MIME types
               const getFileType = (mime, filename) => {
                 if (mime && mime.includes("/")) {
                   const subtype = mime.split("/")[1]?.split(".")[0].toUpperCase() || "";
@@ -268,7 +302,6 @@ function DocumentsView() {
                   }
                   if (subtype.length <= 6) return subtype;
                 }
-                // Fallback: extract from filename extension
                 const ext = filename.split(".").pop()?.toUpperCase() || "PDF";
                 if (ext.length > 6) return "FILE";
                 return ext;
@@ -295,62 +328,201 @@ function DocumentsView() {
                         })
                       : "Unknown"}
                   </span>
-                  <div className="status-pill">
-                    <span className="status-dot"></span>
-                    {file.status || "Processed"}
+
+                  <div className={`status-pill ${isProcessing ? "status-processing" : "status-ready"}`}>
+                    <span className={`status-dot ${isProcessing ? "pulse-dot" : "solid-dot"}`}></span>
+                    {displayStatus}
                   </div>
                   <button
-  className="btn-delete-file"
-  onClick={() => handleDelete(file.id)}
-  disabled={isDeleting}
-  title="Delete file"
->
-  {isDeleting ? (
-    <span className="mini-spinner"></span>
-  ) : (
-    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#ef4444" }}>
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-      <line x1="10" y1="11" x2="10" y2="17" />
-      <line x1="14" y1="11" x2="14" y2="17" />
-    </svg>
-  )}
-</button>
+                    className="btn-preview-file"
+                    onClick={() => setPreviewId(file.id)}
+                    title="Preview document details"
+                  >
+                    👁️
+                  </button>
 
+                  <button
+                    className={`btn-ask-doc ${isProcessing ? "disabled" : ""}`}
+                    onClick={() => !isProcessing && onAskAboutDocument(file.filename)}
+                    disabled={isProcessing}
+                    title={
+                      isProcessing
+                        ? "File is currently processing and not yet searchable"
+                        : `Ask questions about ${file.filename}`
+                    }
+                  >
+                    💬 Ask AI
+                  </button>
+
+                  <button
+                    className="btn-delete-file"
+                    onClick={() => setFileToDelete(file)}
+                    disabled={isDeleting}
+                    title="Delete file"
+                  >
+                    {isDeleting ? (
+                      <span className="mini-spinner"></span>
+                    ) : (
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: "#ef4444" }}>
+                        <polyline points="3 6 5 6 21 6" />
+                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                        <line x1="10" y1="11" x2="10" y2="17" />
+                        <line x1="14" y1="11" x2="14" y2="17" />
+                      </svg>
+                    )}
+                  </button>
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {fileToDelete && (
+        <div className="modal-backdrop" onClick={() => setFileToDelete(null)}>
+          <div className="modal-card" onClick={(e) => e.stopPropagation()}>
+            <button
+              className="modal-close-btn"
+              onClick={() => setFileToDelete(null)}
+              title="Close"
+            >
+              ✕
+            </button>
+            <div className="modal-icon-wrap">
+              <span className="modal-warning-icon">⚠️</span>
+            </div>
+            <h3 className="modal-title">Delete Document</h3>
+            <p className="modal-desc">
+              Are you sure you want to delete <strong className="modal-filename">"{fileToDelete.filename}"</strong>?
+            </p>
+            <p className="modal-subtext">
+              This action is <strong>irreversible</strong> and cannot be undone.
+            </p>
+            <div className="modal-actions">
+              <button
+                className="modal-btn-cancel"
+                onClick={() => setFileToDelete(null)}
+                disabled={deletingId === fileToDelete.id}
+              >
+                Cancel
+              </button>
+              <button
+                className="modal-btn-delete"
+                onClick={() => {
+                  const idToDelete = fileToDelete.id;
+                  const idFilename = fileToDelete.filename;
+                  setFileToDelete(null);
+                  handleDelete(idToDelete, idFilename);
+                }}
+                disabled={deletingId === fileToDelete.id}
+              >
+                {deletingId === fileToDelete.id ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewId && (
+        <DocumentPreviewModal
+          uploadId={previewId}
+          onClose={() => setPreviewId(null)}
+        />
+      )}
     </div>
   );
 }
 
-function ChatView() {
-  const { token } = useAuth();
-  const [messages, setMessages] = useState(() => {
-    const saved = localStorage.getItem("studymind_chat_history");
-    return saved
-      ? JSON.parse(saved)
-      : [
-          {
-            role: "assistant",
-            content:
-              "Hello! I'm your StudyMind AI assistant. Ask me anything about your uploaded study materials, and I'll find the answers for you.",
-            timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-          },
-        ];
-  });
+function ChatView({ targetDocument, setTargetDocument }) {
+  const { token, handle401 } = useAuth();
+  const [files, setFiles] = useState([]);
+  const [messages, setMessages] = useState([]);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE = "http://localhost:8000";
+ const API_BASE = "http://localhost:8000";
 
-  // Save history
+  const welcomeMessage = {
+    role: "assistant",
+    content:
+      "Hello! I'm your StudyMind AI assistant. Select a document or ask me anything about your uploaded study materials.",
+    timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  };
+
+  // Load past conversation from the backend when the chat page opens
   useEffect(() => {
-    localStorage.setItem("studymind_chat_history", JSON.stringify(messages));
-  }, [messages]);
+    fetch(`${API_BASE}/chat-history`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (handle401(res)) return;
+        if (!res.ok) throw new Error("Failed to load chat history");
+        return res.json();
+      })
+      .then((data) => {
+        if (data && data.length > 0) {
+          const formatted = data.map((msg) => ({
+            role: msg.role,
+            content: msg.content,
+            sources: msg.sources || [],
+            timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            }),
+          }));
+          setMessages(formatted);
+        } else {
+          setMessages([welcomeMessage]);
+        }
+        setHistoryLoaded(true);
+      })
+      .catch(() => {
+        setMessages([welcomeMessage]);
+        setHistoryLoaded(true);
+      });
+  }, [token]);
+
+  // Save one message to the backend (fire-and-forget)
+  function saveMessage(message) {
+    fetch(`${API_BASE}/chat-history`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        role: message.role,
+        content: message.content,
+        sources: message.sources || null,
+      }),
+    }).catch(() => {
+      // Silent fail — losing a history save shouldn't break the chat UX
+    });
+  }
+
+  // Fetch uploads to populate document scope selector
+  function fetchUploads() {
+    fetch(`${API_BASE}/uploads`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => {
+        if (handle401(res)) return;
+        if (res.ok) return res.json();
+      })
+      .then((data) => {
+        if (data) setFiles(data);
+      })
+      .catch(() => {});
+  }
+
+  useEffect(() => {
+    fetchUploads();
+    const interval = setInterval(fetchUploads, 3000);
+    return () => clearInterval(interval);
+  }, [token]);
 
   const scrollToBottom = () => {
     const container = document.getElementById("chat-messages-scroll");
@@ -372,6 +544,7 @@ function ChatView() {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    saveMessage(userMessage);
     setInput("");
     setIsLoading(true);
 
@@ -392,9 +565,11 @@ function ChatView() {
           history: apiHistory,
           top_k: 4,
           include_sources: true,
+          filename: targetDocument || null,
         }),
       });
 
+      if (handle401(response)) return;
       if (!response.ok) throw new Error("Failed to connect to AI server");
 
       const data = await response.json();
@@ -408,16 +583,15 @@ function ChatView() {
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
+      saveMessage(assistantMessage);
     } catch (err) {
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: "assistant",
-          content: "Sorry, I had trouble reaching the AI server. Please make sure the backend is running.",
-          isError: true,
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ]);
+      const errorMessage = {
+        role: "assistant",
+        content: "Sorry, I had trouble reaching the AI server. Please make sure the backend is running.",
+        isError: true,
+        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
@@ -432,74 +606,111 @@ function ChatView() {
 
   const clearHistory = () => {
     if (window.confirm("Are you sure you want to clear your conversation history?")) {
-      const initial = [
-        {
-          role: "assistant",
-          content:
-            "Hello! I'm your StudyMind AI assistant. Ask me anything about your uploaded study materials, and I'll find the answers for you.",
-          timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-        },
-      ];
-      setMessages(initial);
-      localStorage.removeItem("studymind_chat_history");
+      fetch(`${API_BASE}/chat-history`, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      })
+        .then((res) => {
+          if (handle401(res)) return;
+          setMessages([welcomeMessage]);
+        })
+        .catch(() => {
+          setMessages([welcomeMessage]);
+        });
     }
   };
 
   return (
     <div className="chat-view">
-      {/* Chat Header */}
+      {/* Chat Header Bar */}
       <div className="chat-header-bar">
-        <div className="chat-status-info">
-          <span className="status-dot-green"></span>
-          <span className="status-text">Online</span>
+        <div className="chat-doc-selector-container">
+          <span className="selector-icon">🎯 Scope:</span>
+          <select
+            value={targetDocument || ""}
+            onChange={(e) => setTargetDocument(e.target.value || null)}
+            className="chat-doc-select"
+          >
+            <option value="">All Searchable Documents</option>
+            {files.map((file) => {
+              const isProcessing = (file.status || "").toLowerCase() === "processing";
+              return (
+                <option key={file.id} value={file.filename} disabled={isProcessing}>
+                  {file.filename} {isProcessing ? "⏳ (Processing - Not Searchable)" : "✓ (Ready)"}
+                </option>
+              );
+            })}
+          </select>
+          {targetDocument && (
+            <button
+              className="btn-clear-target-doc"
+              onClick={() => setTargetDocument(null)}
+              title="Clear active document filter"
+            >
+              ✕ Clear Filter
+            </button>
+          )}
         </div>
-        <button className="btn-clear-chat" onClick={clearHistory}>
-          Clear
-        </button>
+
+        <div className="chat-header-right">
+          <div className="chat-status-info">
+            <span className="status-dot-green"></span>
+            <span className="status-text">Online</span>
+          </div>
+          <button className="btn-clear-chat" onClick={clearHistory}>
+            Clear
+          </button>
+        </div>
       </div>
 
-      {/* Messages */}
+      {targetDocument && (
+        <div className="target-doc-banner">
+          <span>Asking specifically about <strong>"{targetDocument}"</strong></span>
+        </div>
+      )}
+
       <div className="chat-messages-scroll" id="chat-messages-scroll">
-        {messages.map((msg, index) => (
-          <div
-            key={index}
-            className={`msg-wrapper ${msg.role === "user" ? "msg-user" : "msg-ai"}`}
-          >
-            <div
-              className={`msg-bubble ${
-                msg.role === "user" ? "bubble-user" : "bubble-ai"
-              } ${msg.isError ? "bubble-error" : ""}`}
-            >
-              <div className="msg-content">{msg.content}</div>
+        {!historyLoaded && <p className="modal-status-text">Loading conversation...</p>}
 
-              {/* Sources */}
-              {msg.sources && msg.sources.length > 0 && (
-                <div className="msg-sources">
-                  <span className="sources-title">🔍 Sources:</span>
-                  <div className="sources-list">
-                    {msg.sources.map((src, i) => (
-                      <span key={i} className="source-chip" title={src.chunk}>
-                        {src.document}
+        {historyLoaded &&
+          messages.map((msg, index) => (
+            <div key={index} className={`msg-wrapper ${msg.role === "user" ? "msg-user" : "msg-ai"}`}>
+              <div
+                className={`msg-bubble ${
+                  msg.role === "user" ? "bubble-user" : "bubble-ai"
+                } ${msg.isError ? "bubble-error" : ""}`}
+              >
+                <div className="msg-content">{msg.content}</div>
+
+                {msg.sources && msg.sources.length > 0 && (
+                  <div className="msg-sources">
+                    <span className="sources-title">🔍 Sources:</span>
+                    <div className="sources-list">
+                      {msg.sources.map((src, i) => (
+                        <span key={i} className="source-chip" title={src.chunk}>
+                          {src.document}
+                        </span>
+                      ))}
+                    </div>
+                    {msg.timing && (
+                      <span className="source-speed">
+                        Grounded in {msg.timing.total_ms}ms (LLM: {msg.timing.llm_ms}ms)
                       </span>
-                    ))}
+                    )}
                   </div>
-                  {msg.timing && (
-                    <span className="source-speed">
-                      Grounded in {msg.timing.total_ms}ms (LLM: {msg.timing.llm_ms}ms)
-                    </span>
-                  )}
-                </div>
-              )}
+                )}
 
-              <span className="msg-time">{msg.timestamp}</span>
+                <span className="msg-time">{msg.timestamp}</span>
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
 
-        {/* Typing Indicator */}
         {isLoading && (
           <div className="msg-wrapper msg-ai">
             <div className="msg-bubble bubble-ai typing-bubble">
+              <div className="typing-header">
+                <span className="typing-text">AI is typing</span>
+              </div>
               <div className="typing-dots">
                 <span></span><span></span><span></span>
               </div>
@@ -508,14 +719,17 @@ function ChatView() {
         )}
       </div>
 
-      {/* Input */}
       <form className="chat-input-bar" onSubmit={handleSend}>
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ask a question about your documents... (Press Enter to send)"
+          placeholder={
+            targetDocument
+              ? `Ask a question about ${targetDocument}...`
+              : "Ask a question about your documents... (Press Enter to send)"
+          }
           className="chat-text-input"
           disabled={isLoading}
         />
@@ -547,6 +761,12 @@ function GraphView() {
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("documents");
+  const [targetDocument, setTargetDocument] = useState(null);
+
+  const handleAskAboutDocument = (filename) => {
+    setTargetDocument(filename);
+    setActiveTab("chat");
+  };
 
   return (
     <div className="app-shell">
@@ -554,9 +774,17 @@ export default function Dashboard() {
       <div className="main-area">
         <TopBar activeTab={activeTab} />
         <div className="page-content">
-          {activeTab === "documents" && <DocumentsView />}
-          {activeTab === "chat" && <ChatView />}
+          {activeTab === "documents" && (
+            <DocumentsView onAskAboutDocument={handleAskAboutDocument} />
+          )}
+          {activeTab === "chat" && (
+            <ChatView
+              targetDocument={targetDocument}
+              setTargetDocument={setTargetDocument}
+            />
+          )}
           {activeTab === "graph" && <GraphView />}
+          {activeTab === "settings" && <SettingsView />}
         </div>
       </div>
     </div>

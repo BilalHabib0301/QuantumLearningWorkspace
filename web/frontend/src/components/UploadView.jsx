@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 
 function UploadView({ onUploadSuccess }) {
-  const { token } = useAuth();
+  const { token, handle401 } = useAuth();
   const fileInputRef = useRef(null);
 
   const [selectedFile, setSelectedFile] = useState(null);
@@ -36,6 +36,8 @@ function UploadView({ onUploadSuccess }) {
         },
         body: formData,
       });
+
+      if (handle401(response)) return;
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
