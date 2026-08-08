@@ -152,6 +152,11 @@ function DocumentsView({ onAskAboutDocument }) {
   const [uploadStatus, setUploadStatus] = useState("");
   const [previewId, setPreviewId] = useState(null);
 
+  // Search, Filter & Sort
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [sortOption, setSortOption] = useState("Newest");
+
   const API_BASE = "http://localhost:8000";
 
   function fetchUploads(isSilent = false) {
@@ -251,6 +256,34 @@ function DocumentsView({ onAskAboutDocument }) {
     return () => clearInterval(interval);
   }, [token]);
 
+  // Search, Filter & Sort
+  const displayedFiles = [...files]
+    .filter((file) => {
+      if (statusFilter === "All") return true;
+      return (file.status || "").toLowerCase() === statusFilter.toLowerCase();
+    })
+    .filter((file) =>
+      file.filename.toLowerCase().includes(searchTerm.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortOption) {
+        case "Newest":
+          return new Date(b.upload_date) - new Date(a.upload_date);
+
+        case "Oldest":
+          return new Date(a.upload_date) - new Date(b.upload_date);
+
+        case "A-Z":
+          return a.filename.localeCompare(b.filename);
+
+        case "Z-A":
+          return b.filename.localeCompare(a.filename);
+
+        default:
+          return 0;
+      }
+    });
+
   return (
     <div className="documents-view">
       {/* Upload Card */}
@@ -298,6 +331,34 @@ function DocumentsView({ onAskAboutDocument }) {
           </div>
         </div>
 
+        <div className="file-controls">
+          <input
+            type="text"
+            placeholder="Search by filename..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+
+          <select
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="All">All</option>
+            <option value="Processing">Processing</option>
+            <option value="Ready">Ready</option>
+          </select>
+
+          <select
+            value={sortOption}
+            onChange={(e) => setSortOption(e.target.value)}
+          >
+            <option value="Newest">Newest First</option>
+            <option value="Oldest">Oldest First</option>
+            <option value="A-Z">A-Z</option>
+            <option value="Z-A">Z-A</option>
+          </select>
+        </div>
+
         {loading && (
           <div className="loading-state">
             <div className="loading-dots">
@@ -325,7 +386,7 @@ function DocumentsView({ onAskAboutDocument }) {
 
         {!loading && !error && files.length > 0 && (
           <div className="file-rows">
-            {files.map((file) => {
+            {displayedFiles.map((file) => {
               const isDeleting = deletingId === file.id;
               const statusRaw = (file.status || "Ready").toLowerCase();
               const isProcessing = statusRaw === "processing";
