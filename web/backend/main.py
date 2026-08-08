@@ -9,14 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
-from models import SignupRequest, LoginRequest, Upload
-from database import get_users_collection, get_uploads_collection
+from datetime import datetime
+from models import SignupRequest, LoginRequest, Upload, ChatMessage, ChangePasswordRequest
+from database import get_users_collection, get_uploads_collection, get_chat_history_collection
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email
 from routes.chat import router as chat_router
-from pypdf import PdfReader
-
-from models import SignupRequest, LoginRequest, Upload, ChatMessage
-from database import get_users_collection, get_uploads_collection, get_chat_history_collection
 
 app = FastAPI(title="StudyMind AI Backend")
 app.add_middleware(
@@ -66,6 +63,7 @@ async def signup(request: SignupRequest):
     new_user = {
         "email": request.email,
         "hashed_password": hashed,
+        "created_at": datetime.utcnow().strftime("%B %d, %Y"),
     }
 
     await users.insert_one(new_user)
@@ -87,6 +85,53 @@ async def login(request: LoginRequest):
     token = create_access_token(email=user["email"])
 
     return {"access_token": token, "token_type": "bearer"}
+
+
+@app.get("/me")
+async def get_my_profile(current_user_email: str = Depends(get_current_user_email)):
+    users = get_users_collection()
+    user = await users.find_one({"email": current_user_email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    uploads = get_uploads_collection()
+    upload_count = await uploads.count_documents({"user_id": current_user_email})
+
+    created_at = user.get("created_at") or user.get("created_date") or "July 2026"
+    if isinstance(created_at, datetime):
+        created_at = created_at.strftime("%B %d, %Y")
+
+    return {
+        "email": user["email"],
+        "created_at": str(created_at),
+        "document_count": upload_count,
+    }
+
+
+@app.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user_email: str = Depends(get_current_user_email),
+):
+    users = get_users_collection()
+    user = await users.find_one({"email": current_user_email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found.")
+
+    if not verify_password(request.old_password, user["hashed_password"]):
+        raise HTTPException(status_code=400, detail="Current password is incorrect.")
+
+    if request.old_password == request.new_password:
+        raise HTTPException(
+            status_code=400, detail="New password must be different from current password."
+        )
+
+    new_hashed = hash_password(request.new_password)
+    await users.update_one(
+        {"email": current_user_email}, {"$set": {"hashed_password": new_hashed}}
+    )
+
+    return {"message": "Password changed successfully."}
 
 
 @app.post("/upload")

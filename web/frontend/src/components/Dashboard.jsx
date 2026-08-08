@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
+import ProfileView from "./ProfileView.jsx";
 import SettingsView from "./SettingsView.jsx";
 import "./Dashboard.css";
 import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
@@ -15,7 +16,7 @@ function SidebarNav({ activeTab, setActiveTab }) {
     { id: "documents", icon: "📄", label: "Documents" },
     { id: "chat", icon: "💬", label: "AI Chat" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
-    { id: "settings", icon: "⚙️", label: "Settings" },
+    { id: "profile", icon: "👤", label: "Profile" },
   ];
 
   return (
@@ -30,13 +31,15 @@ function SidebarNav({ activeTab, setActiveTab }) {
         {navItems.map((item) => (
           <button
             key={item.id}
-            className={`nav-btn ${activeTab === item.id ? "active" : ""}`}
+            className={`nav-btn ${activeTab === item.id || (item.id === "profile" && activeTab === "settings") ? "active" : ""}`}
             onClick={() => setActiveTab(item.id)}
             title={item.label}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="nav-tooltip">{item.label}</span>
-            {activeTab === item.id && <span className="nav-indicator"></span>}
+            {(activeTab === item.id || (item.id === "profile" && activeTab === "settings")) && (
+              <span className="nav-indicator"></span>
+            )}
           </button>
         ))}
       </nav>
@@ -45,8 +48,8 @@ function SidebarNav({ activeTab, setActiveTab }) {
       <div className="sidebar-bottom">
         <div
           className="user-avatar-circle"
-          onClick={() => setActiveTab("settings")}
-          title={`${userEmail || "User"} (Click for Settings)`}
+          onClick={() => setActiveTab("profile")}
+          title={`${userEmail || "User"} (Click for Profile)`}
           style={{ cursor: "pointer" }}
         >
           {initial}
@@ -64,6 +67,10 @@ function SidebarNav({ activeTab, setActiveTab }) {
 }
 
 function TopBar({ activeTab }) {
+  const { userEmail } = useAuth();
+  const initial = userEmail ? userEmail[0].toUpperCase() : "U";
+  const displayName = userEmail ? userEmail.split("@")[0] : "Student User";
+
   const pageTitles = {
     documents: {
       title: "Your Dashboard",
@@ -77,9 +84,13 @@ function TopBar({ activeTab }) {
       title: "Knowledge Graph",
       subtitle: "Visualize connections between concepts in your materials",
     },
+    profile: {
+      title: "Profile",
+      subtitle: "Manage your account settings and preferences",
+    },
     settings: {
-      title: "Account Settings",
-      subtitle: "Manage your profile, session security, and workspace preferences",
+      title: "Profile",
+      subtitle: "Manage your account settings and preferences",
     },
   };
 
@@ -91,11 +102,37 @@ function TopBar({ activeTab }) {
         <h1 className="top-bar-title">{title}</h1>
         <p className="top-bar-subtitle">{subtitle}</p>
       </div>
-      <div className="top-bar-user">
-        <div className="user-badge">
-          <span className="user-badge-avatar">U</span>
-          <span className="user-badge-name">Active User</span>
+      <div
+        className="user-badge"
+        style={{
+          display: "flex",
+          alignItems: "center",
+          gap: "10px",
+          padding: "8px 14px",
+          background: "rgba(124,58,237,0.06)",
+          border: "1px solid rgba(124,58,237,0.15)",
+          borderRadius: "10px",
+        }}
+      >
+        <div
+          style={{
+            width: "28px",
+            height: "28px",
+            background: "linear-gradient(135deg, #7c3aed, #ec4899)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "0.72rem",
+            fontWeight: "700",
+            color: "white",
+          }}
+        >
+          {initial}
         </div>
+        <span style={{ fontSize: "0.85rem", fontWeight: "500", color: "#f8fafc" }}>
+          {displayName}
+        </span>
       </div>
     </header>
   );
@@ -784,7 +821,7 @@ export default function Dashboard() {
             />
           )}
           {activeTab === "graph" && <GraphView />}
-          {activeTab === "settings" && <SettingsView />}
+          {(activeTab === "profile" || activeTab === "settings") && <ProfileView />}
         </div>
       </div>
     </div>

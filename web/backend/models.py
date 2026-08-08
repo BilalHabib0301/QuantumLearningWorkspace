@@ -19,6 +19,11 @@ class LoginRequest(BaseModel):
     email: EmailStr
     password: str
 
+
+class ChangePasswordRequest(BaseModel):
+    old_password: str
+    new_password: str = Field(..., min_length=6)
+
 class Upload(BaseModel):
     filename: str = Field(..., min_length=1)
     upload_date: datetime = Field(default_factory=datetime.utcnow)
