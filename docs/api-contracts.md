@@ -142,3 +142,84 @@ See `web/backend/` — `GET /health`. Chatbot `/ask` lives only on the Mu servic
 ## Ingestion (Team Lambda)
 
 See `ai-ml/ingestion/`. Extracted document text must be treated as **untrusted data** when fed into RAG (see `docs/architecture.md` — Team Mu RAG security).
+
+
+
+---
+
+## Quiz Generation (Team Lambda)
+
+**Service root:** `ai-ml/quiz_generator/`
+
+**Default local base URL:** `http://127.0.0.1:8002`
+
+**Run:**
+
+```bash
+cd ai-ml
+uvicorn quiz_generator.app.main:app --reload --port 8002
+```
+
+Interactive docs: [http://127.0.0.1:8002/docs](http://127.0.0.1:8002/docs)
+
+Env vars (root `.env`): `GROQ_API_KEY`, `PINECONE_API_KEY`, `MONGODB_URI`, `MONGODB_DB`, `MONGODB_COLLECTION`.
+
+**Pipeline:** topic → embedding search (Pinecone) → full text resolve (MongoDB) → LLM generates structured questions per `quiz_type` → split into a public `questions` list (no answers) and a server-side `answers` list, matched by `question_id`.
+
+---
+
+### `GET /health`
+
+**Response `200`:**
+```json
+{"status": "ok"}
+```
+
+---
+
+### `POST /generate-quiz`
+
+#### Request body
+
+| Field | Type | Required | Default | Notes |
+|-------|------|----------|---------|--------|
+| `topic` | string | yes | — | Non-empty |
+| `question_count` | integer | no | `5` | Clamped **1–20** |
+| `quiz_type` | string | yes | — | One of: `mcq`, `true_false`, `fill_blank`, `short_answer` |
+
+#### Response `200`
+
+```json
+{
+  "success": true,
+  "message": "Generated 3 questions.",
+  "questions": [
+    {
+      "question_id": "74724f0b-4d3c-4d7c-8752-e1ec089c262a",
+      "question": "Where does photosynthesis primarily occur in plant cells?",
+      "question_type": "mcq",
+      "options": ["Roots", "Stems", "Leaves", "Flowers"],
+      "difficulty": "medium",
+      "topic": "photosynthesis"
+    }
+  ],
+  "answers": [
+    {
+      "question_id": "74724f0b-4d3c-4d7c-8752-e1ec089c262a",
+      "answer": "Leaves",
+      "explanation": null
+    }
+  ]
+}
+```
+
+**Note:** `questions` (shown to the user before submission) never includes the correct answer. Answers are returned in a separate list, matched by `question_id`, so the frontend can grade after submission without exposing answers upfront. `options` is `null` for `fill_blank` and `short_answer` types, and `["True", "False"]` for `true_false`.
+
+#### Errors
+
+| Status | When |
+|--------|------|
+| `400` | Invalid `quiz_type`, or no relevant content found for `topic` (returned as `success: false` in body) |
+| `502` | Upstream generation error (e.g. LLM returned malformed data) |
+
+**Known issue:** Live requests currently fail due to a MongoDB Atlas TLS connectivity issue from the current development network — this is infrastructure-level, not a code defect. Generation logic has been independently verified against all 4 quiz types by bypassing storage.

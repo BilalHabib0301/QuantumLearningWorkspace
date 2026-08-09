@@ -15,6 +15,7 @@ similarity search can be resolved back to the full chunk via MongoDB.
 
 import uuid
 from pymongo import MongoClient
+import certifi
 
 from embedding.config import settings
 from embedding.chunker import chunk_document
@@ -30,7 +31,9 @@ class Embedder:
         self.model = model or get_embedding_model()
         self.vector_store = vector_store or PineconeVectorStore(dimension=self.model.dimension())
 
-        self._mongo_client = mongo_client or MongoClient(settings.mongodb_uri)
+        self._mongo_client = mongo_client or MongoClient(
+            settings.mongodb_uri, tlsCAFile=certifi.where()
+        )
         self._db = self._mongo_client[settings.mongodb_db]
         self._collection = self._db[settings.mongodb_collection]
 

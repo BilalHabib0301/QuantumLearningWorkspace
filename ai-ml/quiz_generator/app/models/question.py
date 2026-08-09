@@ -13,6 +13,16 @@ class Question(BaseModel):
         description="The question statement."
     )
 
+    question_id: str = Field(
+        ...,
+        description="Unique ID linking this question to its answer."
+    )
+
+    topic: str = Field(
+        default="",
+        description="Topic this question was generated from."
+    )
+
     question_type: str = Field(
         ...,
         description="Type of question (mcq, true_false, fill_blank, short_answer)."
@@ -37,3 +47,4 @@ class Question(BaseModel):
         default=None,
         description="Optional explanation of the correct answer."
     )
+
