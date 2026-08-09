@@ -9,7 +9,7 @@ Team Pluto (Web) will call it from the frontend.
 
 **Service root:** `chatbot/rag-engine/` (separate from `web/backend/`)
 
-**Default local base URL:** `http://127.0.0.1:8001`
+**Default local base URL:** `http://127.0.0.1:8000`
 
 **Run:**
 
@@ -17,10 +17,10 @@ Team Pluto (Web) will call it from the frontend.
 cd chatbot
 pip install -r requirements.txt
 cd rag-engine
-uvicorn main:app --reload --host 127.0.0.1 --port 8001
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
 ```
 
-Interactive docs: [http://127.0.0.1:8001/docs](http://127.0.0.1:8001/docs)
+Interactive docs: [http://127.0.0.1:8000/docs](http://127.0.0.1:8000/docs)
 
 Env vars: see `chatbot/rag-engine/.env.example` (includes `ENABLE_CACHE`, `RATE_LIMIT_MAX`, `ENABLE_MULTI_HOP`, etc.).
 
@@ -221,5 +221,6 @@ Env vars (root `.env`): `GROQ_API_KEY`, `PINECONE_API_KEY`, `MONGODB_URI`, `MONG
 |--------|------|
 | `400` | Invalid `quiz_type`, or no relevant content found for `topic` (returned as `success: false` in body) |
 | `502` | Upstream generation error (e.g. LLM returned malformed data) |
+
 
 
