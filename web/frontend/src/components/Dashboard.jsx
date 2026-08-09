@@ -534,14 +534,16 @@ function DocumentsView({ onAskAboutDocument }) {
 }
 
 function ChatView({ targetDocument, setTargetDocument }) {
-  const { token, handle401 } = useAuth();
+  const { token, userEmail, handle401 } = useAuth();
   const [files, setFiles] = useState([]);
-  const [messages, setMessages] = useState([]);
-  const [historyLoaded, setHistoryLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
- const API_BASE = "http://localhost:8000";
+  const API_BASE = "http://localhost:8000";
+
+  const getStorageKey = () => {
+    return userEmail ? `studymind_chat_history_${userEmail}` : "studymind_chat_history";
+  };
 
   const welcomeMessage = {
     role: "assistant",
@@ -550,7 +552,31 @@ function ChatView({ targetDocument, setTargetDocument }) {
     timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
   };
 
-  // Load past conversation from the backend when the chat page opens
+  const [messages, setMessages] = useState(() => {
+    try {
+      const saved =
+        localStorage.getItem(getStorageKey()) ||
+        localStorage.getItem("studymind_chat_history");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return [welcomeMessage];
+  });
+
+  // Save history to localStorage whenever messages change
+  useEffect(() => {
+    if (messages && messages.length > 0) {
+      try {
+        const key = getStorageKey();
+        localStorage.setItem(key, JSON.stringify(messages));
+        localStorage.setItem("studymind_chat_history", JSON.stringify(messages));
+      } catch {}
+    }
+  }, [messages, userEmail]);
+
+  // Load past conversation from backend on initial mount
   useEffect(() => {
     fetch(`${API_BASE}/chat-history`, {
       headers: { Authorization: `Bearer ${token}` },
@@ -561,26 +587,22 @@ function ChatView({ targetDocument, setTargetDocument }) {
         return res.json();
       })
       .then((data) => {
-        if (data && data.length > 0) {
+        if (data && Array.isArray(data) && data.length > 0) {
           const formatted = data.map((msg) => ({
             role: msg.role,
             content: msg.content,
             sources: msg.sources || [],
-            timestamp: new Date(msg.timestamp).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            }),
+            timestamp: msg.timestamp
+              ? new Date(msg.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })
+              : new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
           }));
           setMessages(formatted);
-        } else {
-          setMessages([welcomeMessage]);
         }
-        setHistoryLoaded(true);
       })
-      .catch(() => {
-        setMessages([welcomeMessage]);
-        setHistoryLoaded(true);
-      });
+      .catch(() => {});
   }, [token]);
 
   // Save one message to the backend (fire-and-forget)
@@ -768,10 +790,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
       )}
 
       <div className="chat-messages-scroll" id="chat-messages-scroll">
-        {!historyLoaded && <p className="modal-status-text">Loading conversation...</p>}
-
-        {historyLoaded &&
-          messages.map((msg, index) => (
+        {(messages || []).map((msg, index) => (
             <div key={index} className={`msg-wrapper ${msg.role === "user" ? "msg-user" : "msg-ai"}`}>
               <div
                 className={`msg-bubble ${

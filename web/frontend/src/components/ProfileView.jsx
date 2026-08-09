@@ -33,29 +33,69 @@ export default function ProfileView() {
   const initial = userEmail ? userEmail[0].toUpperCase() : "U";
   const displayName = userEmail ? userEmail.split("@")[0] : "Student User";
 
+  const getLocalQuestionCount = () => {
+    try {
+      let count = 0;
+      const keys = [
+        "studymind_chat_history",
+        userEmail ? `studymind_chat_history_${userEmail}` : "",
+        "studymind_chat_history_guest",
+      ];
+      for (const k of keys) {
+        if (!k) continue;
+        const saved = localStorage.getItem(k);
+        if (saved) {
+          const msgs = JSON.parse(saved);
+          if (Array.isArray(msgs)) {
+            count += msgs.filter((m) => m && m.role === "user").length;
+          }
+        }
+      }
+      return count;
+    } catch {
+      return 0;
+    }
+  };
+
   useEffect(() => {
     if (!token) return;
     setLoading(true);
-    fetch(`${API_BASE}/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => {
-        if (handle401(res)) return;
-        if (!res.ok) throw new Error("Failed to fetch profile");
-        return res.json();
+
+    Promise.all([
+      fetch(`${API_BASE}/me`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => {
+        if (handle401(res)) return null;
+        return res.ok ? res.json() : null;
+      }),
+      fetch(`${API_BASE}/uploads`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }).then((res) => {
+        if (handle401(res)) return [];
+        return res.ok ? res.json() : [];
+      }),
+    ])
+      .then(([meData, uploadsData]) => {
+        const liveCount = Array.isArray(uploadsData)
+          ? uploadsData.length
+          : meData?.document_count || 0;
+        const liveQuestions =
+          meData?.question_count && meData.question_count > 0
+            ? meData.question_count
+            : getLocalQuestionCount();
+
+        setProfileData({
+          email: meData?.email || userEmail || "user@example.com",
+          created_at: meData?.created_at || "August 2026",
+          document_count: liveCount,
+          question_count: liveQuestions,
+        });
       })
-      .then((data) => {
-        if (data) {
-          setProfileData(data);
-        }
-      })
-      .catch(() => {
-        // Fallback default if backend endpoint warming
-      })
+      .catch(() => {})
       .finally(() => {
         setLoading(false);
       });
-  }, [token]);
+  }, [token, userEmail]);
 
   // Password Requirements Checking
   const hasLength = newPassword.length >= 6;
@@ -139,13 +179,17 @@ export default function ProfileView() {
       }
 
       setFormMsg({
-        text: "✓ Password changed successfully! Please log in again with your new password.",
+        text: "✓ Password changed successfully! Logging out... Please log in with your new password.",
         type: "success",
       });
 
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+
+      setTimeout(() => {
+        logout();
+      }, 1500);
     } catch (err) {
       setFormMsg({ text: err.message || "Network error while changing password.", type: "error" });
     } finally {
@@ -177,7 +221,7 @@ export default function ProfileView() {
         </div>
         <div className="stat-card">
           <div className="stat-icon">💬</div>
-          <div className="stat-value">12</div>
+          <div className="stat-value">{profileData.question_count ?? 0}</div>
           <div className="stat-label">Questions Asked</div>
         </div>
         <div className="stat-card">
