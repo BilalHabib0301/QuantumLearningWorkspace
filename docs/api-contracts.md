@@ -222,4 +222,4 @@ Env vars (root `.env`): `GROQ_API_KEY`, `PINECONE_API_KEY`, `MONGODB_URI`, `MONG
 | `400` | Invalid `quiz_type`, or no relevant content found for `topic` (returned as `success: false` in body) |
 | `502` | Upstream generation error (e.g. LLM returned malformed data) |
 
-**Known issue:** Live requests currently fail due to a MongoDB Atlas TLS connectivity issue from the current development network — this is infrastructure-level, not a code defect. Generation logic has been independently verified against all 4 quiz types by bypassing storage.
+
