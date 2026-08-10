@@ -46,6 +46,7 @@ function UploadView({ onUploadSuccess }) {
 
     try {
       const response = await fetch(`${API_BASE}/upload`, {
+      const response = await fetch("http://localhost:5000/upload", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
