@@ -46,7 +46,7 @@ export default function ChatInterface({ onBack }) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = "http://localhost:5000";
 
   // Fetch document uploads and poll status changes
   function fetchUploads() {
@@ -98,11 +98,18 @@ export default function ChatInterface({ onBack }) {
     setIsLoading(true);
 
     const apiHistory = messages
-      .filter((msg) => typeof msg.content === "string" && msg.content.trim().length > 0)
-      .map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : "user",
-        content: msg.content,
-      }));
+  .filter(
+    (msg) =>
+      !msg.isError &&
+      typeof msg.content === "string" &&
+      msg.content.trim().length > 0 &&
+      msg.content !==
+        "Hello! I'm your StudyMind AI assistant. Select a document or ask me anything about your uploaded study materials."
+  )
+  .map((msg) => ({
+    role: msg.role === "assistant" ? "assistant" : "user",
+    content: msg.content,
+  }));
 
     try {
       const response = await fetch(`${API_BASE}/ask`, {
@@ -117,8 +124,8 @@ export default function ChatInterface({ onBack }) {
           history: apiHistory,
           top_k: 4,
           include_sources: true,
-          rerank: true,
-          multi_hop: true,
+          rerank: false,
+          multi_hop: false,
           skip_cache: false,
           filename: selectedDoc || null,
         })
