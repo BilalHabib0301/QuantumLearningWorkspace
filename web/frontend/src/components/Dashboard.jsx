@@ -157,7 +157,7 @@ function DocumentsView({ onAskAboutDocument }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortOption, setSortOption] = useState("Newest");
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = "http://localhost:5000";
 
   function fetchUploads(isSilent = false) {
     if (!isSilent) {
@@ -539,7 +539,8 @@ function ChatView({ targetDocument, setTargetDocument }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = "http://localhost:5000";
+  const CHATBOT_BASE = "http://127.0.0.1:8000";
 
   const getStorageKey = () => {
     return userEmail ? `studymind_chat_history_${userEmail}` : "studymind_chat_history";
@@ -682,6 +683,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
         },
         body: JSON.stringify({
           question: userMessage.content,
+           user_id: userEmail,
           history: apiHistory,
           top_k: 4,
           include_sources: true,
