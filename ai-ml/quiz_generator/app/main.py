@@ -11,8 +11,19 @@ from fastapi import FastAPI, HTTPException
 
 from quiz_generator.app.models.api_models import GenerateQuizRequest, GenerateQuizResponse
 from quiz_generator.app.services.quiz_service import QuizService
+from fastapi.middleware.cors import CORSMiddleware
+
 
 app = FastAPI(title="StudyMind Quiz API — Team Lambda")
+from fastapi.middleware.cors import CORSMiddleware
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 _service: QuizService | None = None
 
