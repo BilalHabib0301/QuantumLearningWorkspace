@@ -38,3 +38,16 @@ class ChatMessage(BaseModel):
     content: str
     sources: Optional[list] = None
     timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+class QuizResult(BaseModel):
+    user_id: str
+    question_id: str
+    topic: str
+    selected_answer: str
+    correct_answer: str
+    is_correct: bool
+    date_taken: datetime = Field(default_factory=datetime.utcnow)
+
+
+class QuizResultRequest(BaseModel):
+    results: list  # List of quiz result dicts

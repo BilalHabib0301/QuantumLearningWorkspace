@@ -4,7 +4,7 @@ import asyncio
 from typing import Optional
 from bson import ObjectId
 
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends, BackgroundTasks
+from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
@@ -12,9 +12,9 @@ from fastapi.responses import JSONResponse
 from datetime import datetime
 
 from pypdf import PdfReader
-from models import SignupRequest, LoginRequest, Upload, ChatMessage, ChangePasswordRequest
-from database import get_users_collection, get_uploads_collection, get_chat_history_collection
-from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email
+from models import SignupRequest, LoginRequest, Upload, ChatMessage, ChangePasswordRequest,QuizResult, QuizResultRequest
+from database import get_users_collection, get_uploads_collection, get_chat_history_collection,get_quiz_results_collection
+from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email, verify_internal_service_key
 from routes.chat import router as chat_router
 import httpx
 
@@ -345,3 +345,69 @@ async def clear_chat_history(current_user_email: str = Depends(get_current_user_
     chat_history = get_chat_history_collection()
     await chat_history.delete_many({"user_id": current_user_email})
     return {"message": "cleared"}
+
+@app.post("/quiz-results")
+async def save_quiz_results(
+    request: QuizResultRequest,
+    current_user_email: str = Depends(get_current_user_email),
+):
+    """Save quiz results for the current user."""
+    quiz_results = get_quiz_results_collection()
+    
+    for result in request.results:
+        record = QuizResult(
+            user_id=current_user_email,
+            question_id=result.get("question_id"),
+            topic=result.get("topic"),
+            selected_answer=result.get("selected_answer"),
+            correct_answer=result.get("correct_answer"),
+            is_correct=result.get("is_correct"),
+        )
+        await quiz_results.insert_one(record.model_dump())
+    
+    return {"message": f"Saved {len(request.results)} quiz results"}
+
+
+@app.get("/quiz-results")
+async def get_quiz_results(current_user_email: str = Depends(get_current_user_email)):
+    """Return this user's quiz history."""
+    quiz_results = get_quiz_results_collection()
+    cursor = quiz_results.find({"user_id": current_user_email})
+    
+    results = []
+    async for doc in cursor:
+        results.append({
+            "question_id": doc.get("question_id"),
+            "topic": doc.get("topic"),
+            "selected_answer": doc.get("selected_answer"),
+            "correct_answer": doc.get("correct_answer"),
+            "is_correct": doc.get("is_correct"),
+            "date_taken": doc.get("date_taken"),
+        })
+    
+    return results
+
+
+@app.get("/quiz-results/{user_id}")
+async def get_quiz_results_by_user_id(
+    user_id: str,
+    x_internal_key: str = Header(None),
+):
+    """Return quiz history for a specific user (internal service access only)."""
+    verify_internal_service_key(x_internal_key)
+    
+    quiz_results = get_quiz_results_collection()
+    cursor = quiz_results.find({"user_id": user_id})
+    
+    results = []
+    async for doc in cursor:
+        results.append({
+            "question_id": doc.get("question_id"),
+            "topic": doc.get("topic"),
+            "selected_answer": doc.get("selected_answer"),
+            "correct_answer": doc.get("correct_answer"),
+            "is_correct": doc.get("is_correct"),
+            "date_taken": doc.get("date_taken"),
+        })
+    
+    return results

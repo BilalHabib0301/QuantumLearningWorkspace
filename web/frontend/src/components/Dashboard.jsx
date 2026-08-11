@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import ProfileView from "./ProfileView.jsx";
 import SettingsView from "./SettingsView.jsx";
+import QuizView from "./QuizView.jsx";
+import QuizResultsView from "./QuizResultsView.jsx";
 import "./Dashboard.css";
 import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
 
@@ -15,6 +17,8 @@ function SidebarNav({ activeTab, setActiveTab }) {
   const navItems = [
     { id: "documents", icon: "📄", label: "Documents" },
     { id: "chat", icon: "💬", label: "AI Chat" },
+    { id: "quiz", icon: "🎯", label: "Quiz" },
+    { id: "results", icon: "📊", label: "Results" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
     { id: "profile", icon: "👤", label: "Profile" },
   ];
@@ -79,6 +83,14 @@ function TopBar({ activeTab }) {
     chat: {
       title: "AI Assistant",
       subtitle: "Ask questions about your uploaded study materials",
+    },
+    quiz: {
+      title: "Quiz",
+      subtitle: "Test your knowledge with AI-generated quizzes",
+    },
+    results: {
+      title: "Quiz Results",
+      subtitle: "View your quiz history and track your progress",
     },
     graph: {
       title: "Knowledge Graph",
@@ -563,7 +575,6 @@ function ChatView({ targetDocument, setTargetDocument }) {
 
   const API_BASE = `http://${window.location.hostname}:8001`;
   const API_BASE = "http://localhost:5000";
-  const CHATBOT_BASE = "http://127.0.0.1:8000";
 
   const getStorageKey = () => {
     return userEmail ? `studymind_chat_history_${userEmail}` : "studymind_chat_history";
@@ -706,7 +717,6 @@ function ChatView({ targetDocument, setTargetDocument }) {
         },
         body: JSON.stringify({
           question: userMessage.content,
-           user_id: userEmail,
           history: apiHistory,
           top_k: 4,
           include_sources: true,
@@ -955,6 +965,8 @@ export default function Dashboard() {
               setTargetDocument={setTargetDocument}
             />
           )}
+          {activeTab === "quiz" && <QuizView />}
+          {activeTab === "results" && <QuizResultsView />}
           {activeTab === "graph" && <GraphView />}
           {(activeTab === "profile" || activeTab === "settings") && <ProfileView />}
         </div>
