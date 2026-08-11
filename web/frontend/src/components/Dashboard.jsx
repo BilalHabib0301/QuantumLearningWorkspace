@@ -169,7 +169,7 @@ function DocumentsView({ onAskAboutDocument }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortOption, setSortOption] = useState("Newest");
 
-  const API_BASE = `http://${window.location.hostname}:8001`;
+  
   const API_BASE = "http://localhost:5000";
 
   function fetchUploads(isSilent = false) {
@@ -573,7 +573,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE = `http://${window.location.hostname}:8001`;
+  
   const API_BASE = "http://localhost:5000";
 
   const getStorageKey = () => {

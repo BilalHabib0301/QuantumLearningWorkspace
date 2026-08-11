@@ -46,7 +46,7 @@ export default function ChatInterface({ onBack }) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const API_BASE = `http://${window.location.hostname}:8001`;
+  
   const API_BASE = "http://localhost:5000";
 
   // Fetch document uploads and poll status changes
