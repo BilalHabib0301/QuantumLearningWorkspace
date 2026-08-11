@@ -12,6 +12,7 @@ load_dotenv()
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev_secret_key_quantum_learning_workspace")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60
+INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "dev_internal_service_key_quantum_learning_workspace")
 
 # This tells FastAPI: "expect a token to arrive via the Authorization header,
 # and here's the endpoint where a token could originally be obtained (/login)."
@@ -57,3 +58,17 @@ def get_current_user_email(
         return email
     except JWTError:
         raise credentials_error
+
+def verify_internal_service_key(x_internal_key: str = None) -> bool:
+    """Verify the internal service key for backend-to-backend communication."""
+    if not x_internal_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing internal service key.",
+        )
+    if x_internal_key != INTERNAL_SERVICE_KEY:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid internal service key.",
+        )
+    return True
