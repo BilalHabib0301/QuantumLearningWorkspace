@@ -122,6 +122,7 @@ _in_memory_db: Dict[str, InMemoryCollection] = {
     "users": InMemoryCollection("users"),
     "uploads": InMemoryCollection("uploads"),
     "chat_history": InMemoryCollection("chat_history"),
+    "quiz_results": InMemoryCollection("quiz_results"),
 }
 
 
@@ -178,3 +179,10 @@ def get_users_collection():
     if isinstance(db, dict):
         return db["users"]
     return db["users"]
+
+def get_quiz_results_collection():
+    """Return the quiz results collection used by the app."""
+    db = get_database()
+    if isinstance(db, dict):
+        return db["quiz_results"]
+    return db["quiz_results"]
