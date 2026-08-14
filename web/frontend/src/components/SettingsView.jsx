@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import LogoutModal from "./LogoutModal.jsx";
 import "./SettingsView.css";
 
 export default function SettingsView() {
   const { userEmail, logout } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const initial = userEmail ? userEmail[0].toUpperCase() : "U";
 
   return (
@@ -20,11 +23,24 @@ export default function SettingsView() {
 
         <div className="settings-action-area">
           <p className="logout-hint">Sign out of your account on this device</p>
-          <button className="btn-simple-logout" onClick={logout}>
+          <button
+            className="btn-simple-logout"
+            onClick={() => setShowLogoutModal(true)}
+            type="button"
+          >
             Log Out
           </button>
         </div>
       </div>
+
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={() => {
+          setShowLogoutModal(false);
+          logout();
+        }}
+      />
     </div>
   );
 }
