@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import "./ProfileView.css";
 
 export default function ProfileView() {
@@ -369,6 +370,18 @@ export default function ProfileView() {
               {isSubmitting ? "Updating Password..." : "Change Password"}
             </button>
           </form>
+        </div>
+
+        {/* Appearance & Preferences Card */}
+        <div className="profile-section-card full-width">
+          <h3>🎨 Appearance & Preferences</h3>
+          <div className="info-row">
+            <div>
+              <span className="info-label" style={{ display: "block", fontSize: "0.9rem", fontWeight: "600", color: "var(--color-text-primary)" }}>Theme</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Toggle between Dark (default) and Light theme</span>
+            </div>
+            <ThemeToggle showLabel={true} />
+          </div>
         </div>
 
         {/* Session Card */}

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import ThemeToggle from "./ThemeToggle.jsx";
 import "./LandingPage.css";
 
 const FEATURES = [
@@ -184,6 +185,7 @@ export default function LandingPage({ onNavigate = () => {} }) {
     <a href="#" onClick={(e) => e.preventDefault()}>How it Works</a>
   </div>
   <div className="nav-actions">
+    <ThemeToggle />
     <button className="btn-ghost" onClick={() => onNavigate("login")}>Log in</button>
     <button className="btn-cta" onClick={() => onNavigate("signup")}>Sign up</button>
   </div>
