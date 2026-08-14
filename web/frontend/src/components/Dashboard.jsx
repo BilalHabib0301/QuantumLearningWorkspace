@@ -3,6 +3,8 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import ProfileView from "./ProfileView.jsx";
 import SettingsView from "./SettingsView.jsx";
+import QuizView from "./QuizView.jsx";
+import QuizResultsView from "./QuizResultsView.jsx";
 import "./Dashboard.css";
 import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
 
@@ -15,6 +17,8 @@ function SidebarNav({ activeTab, setActiveTab }) {
   const navItems = [
     { id: "documents", icon: "📄", label: "Documents" },
     { id: "chat", icon: "💬", label: "AI Chat" },
+    { id: "quiz", icon: "🎯", label: "Quiz" },
+    { id: "results", icon: "📊", label: "Results" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
     { id: "profile", icon: "👤", label: "Profile" },
   ];
@@ -79,6 +83,14 @@ function TopBar({ activeTab }) {
     chat: {
       title: "AI Assistant",
       subtitle: "Ask questions about your uploaded study materials",
+    },
+    quiz: {
+      title: "Quiz",
+      subtitle: "Test your knowledge with AI-generated quizzes",
+    },
+    results: {
+      title: "Quiz Results",
+      subtitle: "View your quiz history and track your progress",
     },
     graph: {
       title: "Knowledge Graph",
@@ -157,7 +169,8 @@ function DocumentsView({ onAskAboutDocument }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortOption, setSortOption] = useState("Newest");
 
-  const API_BASE = "http://localhost:8000";
+  
+  const API_BASE = "http://localhost:5000";
 
   function fetchUploads(isSilent = false) {
     if (!isSilent) {
@@ -186,6 +199,24 @@ function DocumentsView({ onAskAboutDocument }) {
     if (!selectedFile) {
       setUploadMsg("Please choose a file first.");
       setUploadStatus("error");
+      showToast("Please choose a file first.", "error");
+      return;
+    }
+
+    if (!selectedFile.name.toLowerCase().endsWith(".pdf")) {
+      const msg = "Only PDF files (.pdf) are currently supported.";
+      setUploadMsg(msg);
+      setUploadStatus("error");
+      showToast(msg, "error");
+      return;
+    }
+
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (selectedFile.size > MAX_SIZE) {
+      const msg = "File size exceeds the 10MB limit.";
+      setUploadMsg(msg);
+      setUploadStatus("error");
+      showToast(msg, "error");
       return;
     }
 
@@ -217,9 +248,12 @@ function DocumentsView({ onAskAboutDocument }) {
         fetchUploads(true);
       })
       .catch((err) => {
-        setUploadMsg(err.message || "Something went wrong.");
+        const errorText = err.message === "Failed to fetch"
+          ? "Network error — failed to upload file. Please check your connection."
+          : (err.message || "Something went wrong.");
+        setUploadMsg(errorText);
         setUploadStatus("error");
-        showToast(err.message || "Upload failed", "error");
+        showToast(errorText, "error");
       })
       .finally(() => {
         setUploading(false);
@@ -379,8 +413,8 @@ function DocumentsView({ onAskAboutDocument }) {
         {!loading && !error && files.length === 0 && (
           <div className="empty-state">
             <span className="empty-icon">📚</span>
-            <p className="empty-title">No documents yet</p>
-            <p className="empty-subtitle">Upload your first PDF to get started</p>
+            <p className="empty-title">No documents yet - upload your first file to get started</p>
+            <p className="empty-subtitle">Upload your first PDF to start studying with AI</p>
           </div>
         )}
 
@@ -539,7 +573,8 @@ function ChatView({ targetDocument, setTargetDocument }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const API_BASE = "http://localhost:8000";
+  
+  const API_BASE = "http://localhost:5000";
 
   const getStorageKey = () => {
     return userEmail ? `studymind_chat_history_${userEmail}` : "studymind_chat_history";
@@ -709,6 +744,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
         role: "assistant",
         content: "Sorry, I had trouble reaching the AI server. Please make sure the backend is running.",
         isError: true,
+        failedQuestion: userMessage.content,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -798,6 +834,35 @@ function ChatView({ targetDocument, setTargetDocument }) {
                 } ${msg.isError ? "bubble-error" : ""}`}
               >
                 <div className="msg-content">{msg.content}</div>
+
+                {msg.isError && (
+                  <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px solid rgba(239, 68, 68, 0.25)" }}>
+                    <button
+                      className="btn-retry-chat"
+                      style={{
+                        background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                        color: "#ffffff",
+                        fontWeight: "600",
+                        padding: "6px 14px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "0.82rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: "0 2px 8px rgba(239, 68, 68, 0.35)",
+                        border: "none"
+                      }}
+                      onClick={() => {
+                        if (msg.failedQuestion) {
+                          setInput(msg.failedQuestion);
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: "0.9rem" }}>↺</span> Retry
+                    </button>
+                  </div>
+                )}
 
                 {msg.sources && msg.sources.length > 0 && (
                   <div className="msg-sources">
@@ -900,6 +965,8 @@ export default function Dashboard() {
               setTargetDocument={setTargetDocument}
             />
           )}
+          {activeTab === "quiz" && <QuizView />}
+          {activeTab === "results" && <QuizResultsView />}
           {activeTab === "graph" && <GraphView />}
           {(activeTab === "profile" || activeTab === "settings") && <ProfileView />}
         </div>

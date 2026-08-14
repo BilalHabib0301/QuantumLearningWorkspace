@@ -22,7 +22,8 @@ function parseJwt(token) {
 }
 
 export function AuthProvider({ children }) {
-  const { showToast } = useToast();
+  const toastContext = useToast();
+  const showToast = toastContext?.showToast || (() => {});
 
   const [token, setToken] = useState(() => {
     try {
@@ -51,7 +52,7 @@ export function AuthProvider({ children }) {
     }
     const payload = parseJwt(token);
     if (payload && payload.exp && payload.exp * 1000 < Date.now()) {
-      logout();
+      logoutExpired();
     } else if (payload && payload.sub) {
       setUserEmail(payload.sub);
     }
@@ -71,6 +72,17 @@ export function AuthProvider({ children }) {
     showToast("Logged in successfully!", "success");
   };
 
+  const logoutExpired = () => {
+    try {
+      localStorage.removeItem("auth_token");
+    } catch {
+      // ignore
+    }
+    setToken(null);
+    setUserEmail(null);
+    showToast("Your session has expired - please log in again", "error");
+  };
+
   const logout = () => {
     try {
       localStorage.removeItem("auth_token");
@@ -84,8 +96,7 @@ export function AuthProvider({ children }) {
 
   const handle401 = (response) => {
     if (response && response.status === 401) {
-      logout();
-      showToast("Session expired, please log in again", "error");
+      logoutExpired();
       return true;
     }
     return false;

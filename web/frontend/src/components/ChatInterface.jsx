@@ -46,7 +46,8 @@ export default function ChatInterface({ onBack }) {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef(null);
 
-  const API_BASE = "http://localhost:8000";
+  
+  const API_BASE = "http://localhost:5000";
 
   // Fetch document uploads and poll status changes
   function fetchUploads() {
@@ -98,11 +99,18 @@ export default function ChatInterface({ onBack }) {
     setIsLoading(true);
 
     const apiHistory = messages
-      .filter((msg) => typeof msg.content === "string" && msg.content.trim().length > 0)
-      .map((msg) => ({
-        role: msg.role === "assistant" ? "assistant" : "user",
-        content: msg.content,
-      }));
+  .filter(
+    (msg) =>
+      !msg.isError &&
+      typeof msg.content === "string" &&
+      msg.content.trim().length > 0 &&
+      msg.content !==
+        "Hello! I'm your StudyMind AI assistant. Select a document or ask me anything about your uploaded study materials."
+  )
+  .map((msg) => ({
+    role: msg.role === "assistant" ? "assistant" : "user",
+    content: msg.content,
+  }));
 
     try {
       const response = await fetch(`${API_BASE}/ask`, {
@@ -117,8 +125,8 @@ export default function ChatInterface({ onBack }) {
           history: apiHistory,
           top_k: 4,
           include_sources: true,
-          rerank: true,
-          multi_hop: true,
+          rerank: false,
+          multi_hop: false,
           skip_cache: false,
           filename: selectedDoc || null,
         })
@@ -145,6 +153,7 @@ export default function ChatInterface({ onBack }) {
           role: "assistant",
           content: "Sorry, I had trouble reaching the AI server. Please make sure the backend is running.",
           isError: true,
+          failedQuestion: userMessage.content,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         }
       ]);
@@ -228,6 +237,35 @@ export default function ChatInterface({ onBack }) {
               )}
 
               <div className="message-content">{msg.content}</div>
+
+              {msg.isError && (
+                <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px solid rgba(239, 68, 68, 0.25)" }}>
+                  <button
+                    className="btn-retry-chat"
+                    style={{
+                      background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                      color: "#ffffff",
+                      fontWeight: "600",
+                      padding: "6px 14px",
+                      borderRadius: "8px",
+                      cursor: "pointer",
+                      fontSize: "0.82rem",
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      boxShadow: "0 2px 8px rgba(239, 68, 68, 0.35)",
+                      border: "none"
+                    }}
+                    onClick={() => {
+                      if (msg.failedQuestion) {
+                        setInput(msg.failedQuestion);
+                      }
+                    }}
+                  >
+                    <span style={{ fontSize: "0.9rem" }}>↺</span> Retry
+                  </button>
+                </div>
+              )}
               
               {/* Show sources if present */}
               {msg.sources && msg.sources.length > 0 && (
