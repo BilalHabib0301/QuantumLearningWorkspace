@@ -206,7 +206,7 @@ export default function ChatInterface({ onBack }) {
             onChange={(e) => setSelectedDoc(e.target.value || null)}
             className="header-doc-select"
           >
-            <option value="">All Searchable Documents</option>
+            <option value="">All Documents</option>
             {files.map((file) => {
               const isProcessing = (file.status || "").toLowerCase() === "processing";
               return (
