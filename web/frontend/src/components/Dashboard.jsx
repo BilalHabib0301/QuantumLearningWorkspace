@@ -4,14 +4,14 @@ import { useToast } from "../context/ToastContext.jsx";
 import ProfileView from "./ProfileView.jsx";
 import QuizView from "./QuizView.jsx";
 import QuizResultsView from "./QuizResultsView.jsx";
-import ThemeToggle from "./ThemeToggle.jsx";
+import LogoutModal from "./LogoutModal.jsx";
 import "./Dashboard.css";
 import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
 
 // ─── Sub-Components ──────────────────────────────────────────────────────────
 
-function SidebarNav({ activeTab, setActiveTab }) {
-  const { logout, userEmail } = useAuth();
+function SidebarNav({ activeTab, setActiveTab, onRequestLogout }) {
+  const { userEmail } = useAuth();
   const initial = userEmail ? userEmail[0].toUpperCase() : "U";
 
   const navItems = [
@@ -58,7 +58,12 @@ function SidebarNav({ activeTab, setActiveTab }) {
         >
           {initial}
         </div>
-        <button className="logout-icon-btn" onClick={logout} title="Logout">
+        <button
+          className="logout-icon-btn"
+          onClick={onRequestLogout}
+          title="Logout"
+          type="button"
+        >
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
@@ -947,15 +952,26 @@ function GraphView() {
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("documents");
   const [targetDocument, setTargetDocument] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { logout } = useAuth();
 
   const handleAskAboutDocument = (filename) => {
     setTargetDocument(filename);
     setActiveTab("chat");
   };
 
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    logout();
+  };
+
   return (
     <div className="app-shell">
-      <SidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <SidebarNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onRequestLogout={() => setShowLogoutModal(true)}
+      />
       <div className="main-area">
         <TopBar activeTab={activeTab} />
         <div className="page-content">
@@ -971,9 +987,16 @@ export default function Dashboard() {
           {activeTab === "quiz" && <QuizView />}
           {activeTab === "results" && <QuizResultsView />}
           {activeTab === "graph" && <GraphView />}
-          {(activeTab === "profile" || activeTab === "settings") && <ProfileView />}
+          {(activeTab === "profile" || activeTab === "settings") && (
+            <ProfileView onRequestLogout={() => setShowLogoutModal(true)} />
+          )}
         </div>
       </div>
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </div>
   );
 }
