@@ -28,4 +28,6 @@ jobs:
         run: |
          pip install -r requirements.txt
       - name: Run unit and API tests
+        env:
+          JWT_SECRET_KEY: ${{ secrets.JWT_SECRET_KEY }}
         run: pytest rag-engine/tests -q --tb=short
