@@ -17,13 +17,14 @@
 .sidebar-nav {
   width: 72px;
   min-width: 72px;
-  background: rgba(13, 11, 28, 0.95);
-  border-right: 1px solid rgba(42, 42, 62, 0.5);
+  background: var(--color-bg-sidebar);
+  border-right: 1px solid var(--color-card-border);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 20px 0;
   position: relative;
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 .sidebar-logo-area {
@@ -167,9 +168,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 20px 32px;
-  border-bottom: 1px solid rgba(42, 42, 62, 0.5);
-  background: rgba(10, 8, 20, 0.6);
+  border-bottom: 1px solid var(--color-card-border);
+  background: var(--color-bg-topbar);
   flex-shrink: 0;
+  transition: background 0.25s ease, border-color 0.25s ease;
 }
 
 .top-bar-info h1 {
@@ -450,12 +452,13 @@
   align-items: center;
   gap: 16px;
   padding: 14px 20px;
-  background: rgba(22, 22, 42, 0.4);
-  border: 1px solid rgba(42, 42, 62, 0.3);
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-card-border);
   border-radius: 10px;
   transition: all 0.3s ease;
   animation: fileSlideIn 0.4s ease forwards;
   opacity: 0;
+  box-shadow: 0 2px 8px var(--color-shadow);
 }
 
 .file-row:nth-child(1) { animation-delay: 0.05s; }
@@ -470,8 +473,8 @@
 }
 
 .file-row:hover {
-  background: rgba(30, 30, 55, 0.5);
-  border-color: rgba(124, 58, 237, 0.25);
+  background: var(--color-card-bg-hover);
+  border-color: var(--color-card-border-hover);
 }
 
 .file-row.deleting {
@@ -701,12 +704,12 @@
   content: "Delete";
   position: absolute;
   right: calc(100% + 10px);
-  background: #16162a;
+  background: var(--color-card-bg);
   padding: 5px 10px;
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #ef4444;
+  color: var(--color-error);
   white-space: nowrap;
   opacity: 0;
   pointer-events: none;
@@ -848,8 +851,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 28px;
-  border-bottom: 1px solid rgba(42, 42, 62, 0.5);
-  background: rgba(10, 8, 20, 0.4);
+  border-bottom: 1px solid var(--color-card-border);
+  background: var(--color-bg-topbar);
   flex-shrink: 0;
 }
 
@@ -948,12 +951,12 @@
 }
 
 .bubble-ai {
-  background: rgba(20, 20, 36, 0.85);
+  background: var(--color-chat-bubble-ai);
   color: var(--color-text-primary);
-  border: 1px solid rgba(124, 58, 237, 0.22);
+  border: 1px solid var(--color-card-border);
   border-radius: 18px 18px 18px 4px;
   backdrop-filter: blur(12px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 16px var(--color-shadow);
 }
 
 .bubble-error {
@@ -1101,8 +1104,8 @@
   align-items: center;
   gap: 12px;
   padding: 14px 28px;
-  border-top: 1px solid rgba(42, 42, 62, 0.5);
-  background: rgba(10, 8, 20, 0.6);
+  border-top: 1px solid var(--color-card-border);
+  background: var(--color-bg-topbar);
   flex-shrink: 0;
 }
 
@@ -1202,7 +1205,7 @@
 .modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(5, 5, 16, 0.78);
+  background: var(--color-modal-overlay);
   -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   z-index: 9999;
@@ -1219,10 +1222,10 @@
 }
 
 .modal-card {
-  background: #141424;
-  border: 1px solid rgba(124, 58, 237, 0.25);
+  background: var(--color-modal-bg);
+  border: 1px solid var(--color-card-border);
   border-radius: 20px;
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.6), 0 0 30px rgba(124, 58, 237, 0.1);
+  box-shadow: 0 25px 60px var(--color-shadow);
   padding: 32px 28px;
   max-width: 440px;
   width: 100%;
@@ -1251,7 +1254,7 @@
 }
 
 .modal-close-btn:hover {
-  color: #fff;
+  color: var(--color-text-primary);
 }
 
 .modal-icon-wrap {
@@ -1274,7 +1277,7 @@
 .modal-title {
   font-size: 1.3rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text-primary);
   margin-bottom: 10px;
 }
 
@@ -1287,12 +1290,12 @@
 }
 
 .modal-filename {
-  color: var(--color-accent-purple, #a78bfa);
+  color: var(--color-accent-purple);
 }
 
 .modal-subtext {
   font-size: 0.85rem;
-  color: #f87171;
+  color: var(--color-error);
   margin-bottom: 24px;
 }
 
@@ -1306,9 +1309,9 @@
   flex: 1;
   padding: 12px 18px;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: var(--color-surface-hover);
+  border: 1px solid var(--color-card-border);
+  color: var(--color-text-primary);
   font-size: 0.9rem;
   font-weight: 600;
   cursor: pointer;
@@ -1316,8 +1319,8 @@
 }
 
 .modal-btn-cancel:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--color-surface-active);
+  border-color: var(--color-primary-purple);
 }
 
 .modal-btn-delete {

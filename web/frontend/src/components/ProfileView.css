@@ -22,8 +22,8 @@
 
 /* Profile Header Card */
 .profile-header-card {
-  background: var(--color-card-bg, #16162a);
-  border: 1px solid rgba(42, 42, 62, 0.4);
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
   border-radius: 16px;
   padding: 32px 36px;
   display: flex;
@@ -31,7 +31,8 @@
   gap: 28px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 10px 30px var(--color-shadow);
+  transition: all 0.3s ease;
 }
 
 .profile-header-card::before {
@@ -41,14 +42,14 @@
   left: 0;
   right: 0;
   height: 4px;
-  background: linear-gradient(to right, #7c3aed, #2563eb);
+  background: var(--gradient-primary);
 }
 
 .profile-avatar {
   width: 86px;
   height: 86px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #7c3aed, #ec4899);
+  background: var(--gradient-logo);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -75,24 +76,24 @@
 .profile-header-info h2 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--color-text-primary);
   margin-bottom: 4px;
 }
 
 .profile-header-info .profile-email {
   font-size: 0.95rem;
-  color: #60a5fa;
+  color: var(--color-accent-blue);
   margin-bottom: 6px;
 }
 
 .profile-header-info .profile-join-date {
   font-size: 0.82rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
 }
 
 .profile-edit-btn {
   padding: 10px 24px;
-  background: linear-gradient(to right, #7c3aed, #2563eb);
+  background: var(--gradient-primary);
   border: none;
   border-radius: 10px;
   color: white;
@@ -116,16 +117,17 @@
 }
 
 .stat-card {
-  background: var(--color-card-bg, #16162a);
-  border: 1px solid rgba(42, 42, 62, 0.4);
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
   border-radius: 14px;
   padding: 24px;
   text-align: center;
   transition: all 0.3s ease;
+  box-shadow: 0 4px 14px var(--color-shadow);
 }
 
 .stat-card:hover {
-  border-color: rgba(124, 58, 237, 0.3);
+  border-color: var(--color-card-border-hover);
   transform: translateY(-2px);
 }
 
@@ -137,15 +139,16 @@
 .stat-value {
   font-size: 2rem;
   font-weight: 700;
-  background: linear-gradient(to right, #a78bfa, #60a5fa);
+  background: var(--gradient-heading);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 4px;
 }
 
 .stat-label {
   font-size: 0.82rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   font-weight: 500;
 }
 
@@ -157,10 +160,12 @@
 }
 
 .profile-section-card {
-  background: var(--color-card-bg, #16162a);
-  border: 1px solid rgba(42, 42, 62, 0.4);
+  background: var(--color-card-bg);
+  border: 1px solid var(--color-card-border);
   border-radius: 14px;
   padding: 24px;
+  box-shadow: 0 4px 14px var(--color-shadow);
+  transition: all 0.3s ease;
 }
 
 .profile-section-card.full-width {
@@ -170,7 +175,7 @@
 .profile-section-card h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text-primary);
   margin-bottom: 16px;
   display: flex;
   align-items: center;
@@ -183,7 +188,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 12px 0;
-  border-bottom: 1px solid rgba(42, 42, 62, 0.3);
+  border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .info-row:last-child {
@@ -192,18 +197,18 @@
 
 .info-label {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
   font-weight: 500;
 }
 
 .info-value {
   font-size: 0.88rem;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--color-text-primary);
 }
 
 .info-value.muted {
-  color: #6b7280;
+  color: var(--color-text-muted);
 }
 
 /* Change Password Form */
@@ -222,7 +227,7 @@
 .form-label {
   font-size: 0.82rem;
   font-weight: 500;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
 }
 
 .password-input-wrapper {
@@ -234,27 +239,27 @@
 .password-input-wrapper .form-input {
   width: 100%;
   padding: 11px 44px 11px 14px;
-  background: #16162a;
-  border: 1px solid #2a2a3e;
-  border-radius: 0.5rem;
-  color: #ffffff;
+  background: var(--color-input-bg);
+  border: 1px solid var(--color-input-border);
+  border-radius: var(--radius-md);
+  color: var(--color-text-primary);
   font-size: 0.88rem;
   outline: none;
   transition: all 0.2s ease;
 }
 
 .password-input-wrapper .form-input:focus {
-  border-color: #7c3aed;
+  border-color: var(--color-primary-purple);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.1);
 }
 
 .password-input-wrapper .form-input.input-error {
-  border-color: #ef4444;
+  border-color: var(--color-error);
   box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
 }
 
 .password-input-wrapper .form-input.input-success {
-  border-color: #22c55e;
+  border-color: var(--color-success);
   box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
 }
 
@@ -275,7 +280,7 @@
 
 .form-error {
   font-size: 0.75rem;
-  color: #ef4444;
+  color: var(--color-error);
   min-height: 16px;
 }
 
@@ -283,7 +288,7 @@
 .strength-bar-container {
   width: 100%;
   height: 4px;
-  background: rgba(42, 42, 62, 0.8);
+  background: var(--color-border-subtle);
   border-radius: 4px;
   margin-top: 4px;
   overflow: hidden;
@@ -298,22 +303,22 @@
 
 .strength-bar.weak {
   width: 33%;
-  background: #ef4444;
+  background: var(--color-error);
 }
 
 .strength-bar.medium {
   width: 66%;
-  background: #f59e0b;
+  background: var(--color-warning);
 }
 
 .strength-bar.strong {
   width: 100%;
-  background: #22c55e;
+  background: var(--color-success);
 }
 
 .strength-text {
   font-size: 0.72rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   margin-top: 4px;
   display: block;
 }
@@ -328,7 +333,7 @@
 
 .req-item {
   font-size: 0.72rem;
-  color: #6b7280;
+  color: var(--color-text-muted);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -340,17 +345,17 @@
 }
 
 .req-item.met {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .req-item.met .req-icon {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 /* Form Message Banner */
 .form-message {
   padding: 10px 14px;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   font-size: 0.82rem;
   font-weight: 500;
 }
@@ -358,20 +363,20 @@
 .form-message.success {
   background: rgba(34, 197, 94, 0.1);
   border: 1px solid rgba(34, 197, 94, 0.25);
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .form-message.error {
   background: rgba(239, 68, 68, 0.1);
   border: 1px solid rgba(239, 68, 68, 0.25);
-  color: #ef4444;
+  color: var(--color-error);
 }
 
 .btn-submit-password {
   padding: 12px 24px;
-  background: linear-gradient(to right, #7c3aed, #2563eb);
+  background: var(--gradient-primary);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-md);
   color: white;
   font-size: 0.9rem;
   font-weight: 600;
@@ -400,7 +405,7 @@
   background: rgba(239, 68, 68, 0.08);
   border: 1.5px solid rgba(239, 68, 68, 0.3);
   border-radius: 10px;
-  color: #ef4444;
+  color: var(--color-error);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
@@ -409,16 +414,17 @@
 
 .btn-logout-profile:hover {
   background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.6);
+  border-color: var(--color-error);
   box-shadow: 0 0 14px rgba(239, 68, 68, 0.2);
 }
 
 /* Danger Zone */
 .danger-zone {
-  background: var(--color-card-bg, #16162a);
+  background: var(--color-card-bg);
   border: 1px solid rgba(239, 68, 68, 0.2);
   border-radius: 14px;
   padding: 24px;
+  box-shadow: 0 4px 14px var(--color-shadow);
 }
 
 .danger-zone.full-width {
@@ -428,7 +434,7 @@
 .danger-zone h3 {
   font-size: 1rem;
   font-weight: 600;
-  color: #ef4444;
+  color: var(--color-error);
   margin-bottom: 12px;
   display: flex;
   align-items: center;
@@ -437,7 +443,7 @@
 
 .danger-zone p {
   font-size: 0.85rem;
-  color: #9ca3af;
+  color: var(--color-text-secondary);
   margin-bottom: 16px;
 }
 
@@ -446,7 +452,7 @@
   background: rgba(239, 68, 68, 0.1);
   border: 1.5px solid rgba(239, 68, 68, 0.4);
   border-radius: 10px;
-  color: #ef4444;
+  color: var(--color-error);
   font-size: 0.88rem;
   font-weight: 600;
   cursor: pointer;
@@ -455,7 +461,7 @@
 
 .btn-delete-account:hover {
   background: rgba(239, 68, 68, 0.2);
-  border-color: #ef4444;
+  border-color: var(--color-error);
   box-shadow: 0 0 14px rgba(239, 68, 68, 0.2);
 }
 

@@ -211,3 +211,37 @@ html, body {
   .hero-title { font-size: 2.2rem; }
   .navbar, .footer { padding-left: 20px; padding-right: 20px; }
 }
+
+/* Light Theme Overrides for Landing Page */
+[data-theme="light"] .landing {
+  --bg-dark: #f8fafc;
+  --bg-card: #ffffff;
+  --border-soft: rgba(0, 0, 0, 0.08);
+  --text-primary: #0f172a;
+  --text-secondary: #475569;
+}
+
+[data-theme="light"] .navbar.scrolled {
+  background: rgba(255, 255, 255, 0.92);
+}
+
+[data-theme="light"] .bento-card,
+[data-theme="light"] .flashcard-face {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+[data-theme="light"] .hero-badge {
+  background: rgba(109, 40, 217, 0.08);
+  border-color: rgba(109, 40, 217, 0.2);
+  color: var(--primary);
+}
+
+[data-theme="light"] .tag {
+  background: #ffffff;
+  border-color: rgba(0, 0, 0, 0.1);
+  color: #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+

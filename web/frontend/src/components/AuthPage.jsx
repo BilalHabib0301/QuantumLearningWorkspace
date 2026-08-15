@@ -1,6 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import "./AuthPage.css";
+
+const API_BASE = "http://localhost:8000";
 
 function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
   const [mode, setMode] = useState(initialMode);
@@ -18,7 +21,7 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
     const endpoint = mode === "login" ? "/login" : "/signup";
 
     try {
-      const response = await fetch(`http://localhost:5000${endpoint}`, {
+      const response = await fetch(`${API_BASE}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
@@ -107,7 +110,10 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
         </button>
       </div>
 
-      <div className="auth-right">
+      <div className="auth-right" style={{ position: "relative" }}>
+        <div style={{ position: "absolute", top: "20px", right: "24px" }}>
+          <ThemeToggle />
+        </div>
         <div className="auth-card">
           <h1>{mode === "login" ? "Welcome Back" : "Create Account"}</h1>
           <p className="auth-card-subtext">

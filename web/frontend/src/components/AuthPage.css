@@ -312,9 +312,33 @@
 
 .auth-social-btn:hover {
   border-color: var(--color-primary-purple);
-  background: #1c1c33;
+  background: var(--color-surface-hover);
 }
 
 @media (max-width: 900px) {
   .auth-left { display: none; }
+}
+
+/* Light Theme Overrides for Auth Page */
+[data-theme="light"] .auth-container {
+  background: var(--color-bg-body);
+}
+
+[data-theme="light"] .auth-feature {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
+}
+
+[data-theme="light"] .auth-tabs {
+  background: #e2e8f0;
+}
+
+[data-theme="light"] .auth-social-btn {
+  background: #ffffff;
+  border-color: #cbd5e1;
+}
+
+[data-theme="light"] .auth-social-btn:hover {
+  background: #f8fafc;
 }

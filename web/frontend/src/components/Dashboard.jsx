@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import ProfileView from "./ProfileView.jsx";
-import SettingsView from "./SettingsView.jsx";
 import QuizView from "./QuizView.jsx";
 import QuizResultsView from "./QuizResultsView.jsx";
 import LogoutModal from "./LogoutModal.jsx";
@@ -120,37 +119,40 @@ function TopBar({ activeTab }) {
         <h1 className="top-bar-title">{title}</h1>
         <p className="top-bar-subtitle">{subtitle}</p>
       </div>
-      <div
-        className="user-badge"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          padding: "8px 14px",
-          background: "rgba(124,58,237,0.06)",
-          border: "1px solid rgba(124,58,237,0.15)",
-          borderRadius: "10px",
-        }}
-      >
+      <div className="top-bar-right" style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        <ThemeToggle />
         <div
+          className="user-badge"
           style={{
-            width: "28px",
-            height: "28px",
-            background: "linear-gradient(135deg, #7c3aed, #ec4899)",
-            borderRadius: "50%",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.72rem",
-            fontWeight: "700",
-            color: "white",
+            gap: "10px",
+            padding: "8px 14px",
+            background: "var(--color-surface-hover, rgba(124,58,237,0.06))",
+            border: "1px solid var(--color-card-border, rgba(124,58,237,0.15))",
+            borderRadius: "10px",
           }}
         >
-          {initial}
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              background: "linear-gradient(135deg, #7c3aed, #ec4899)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.72rem",
+              fontWeight: "700",
+              color: "white",
+            }}
+          >
+            {initial}
+          </div>
+          <span style={{ fontSize: "0.85rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
+            {displayName}
+          </span>
         </div>
-        <span style={{ fontSize: "0.85rem", fontWeight: "500", color: "#f8fafc" }}>
-          {displayName}
-        </span>
       </div>
     </header>
   );
