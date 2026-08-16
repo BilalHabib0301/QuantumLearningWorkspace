@@ -20,7 +20,6 @@ function SidebarNav({ activeTab, setActiveTab, onRequestLogout }) {
     { id: "quiz", icon: "🎯", label: "Quiz" },
     { id: "results", icon: "📊", label: "Results" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
-    { id: "profile", icon: "👤", label: "Profile" },
   ];
 
   return (
@@ -35,13 +34,13 @@ function SidebarNav({ activeTab, setActiveTab, onRequestLogout }) {
         {navItems.map((item) => (
           <button
             key={item.id}
-            className={`nav-btn ${activeTab === item.id || (item.id === "profile" && activeTab === "settings") ? "active" : ""}`}
+            className={`nav-btn ${activeTab === item.id ? "active" : ""}`}
             onClick={() => setActiveTab(item.id)}
             title={item.label}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="nav-tooltip">{item.label}</span>
-            {(activeTab === item.id || (item.id === "profile" && activeTab === "settings")) && (
+            {activeTab === item.id && (
               <span className="nav-indicator"></span>
             )}
           </button>
@@ -51,12 +50,12 @@ function SidebarNav({ activeTab, setActiveTab, onRequestLogout }) {
       {/* Bottom: User + Logout */}
       <div className="sidebar-bottom">
         <div
-          className="user-avatar-circle"
+          className={`user-avatar-circle ${activeTab === "profile" || activeTab === "settings" ? "active-profile-avatar" : ""}`}
           onClick={() => setActiveTab("profile")}
-          title={`${userEmail || "User"} (Click for Profile)`}
-          style={{ cursor: "pointer" }}
+          style={{ cursor: "pointer", position: "relative" }}
         >
           {initial}
+          <span className="nav-tooltip">Profile</span>
         </div>
         <button
           className="logout-icon-btn"
@@ -478,7 +477,10 @@ function DocumentsView({ onAskAboutDocument }) {
                     onClick={() => setPreviewId(file.id)}
                     title="Preview document details"
                   >
-                    👁️
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+                      <circle cx="12" cy="12" r="3" fill="currentColor" />
+                    </svg>
                   </button>
 
                   <button
@@ -795,7 +797,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
             onChange={(e) => setTargetDocument(e.target.value || null)}
             className="chat-doc-select"
           >
-            <option value="">All Searchable Documents</option>
+            <option value="">All Documents</option>
             {files.map((file) => {
               const isProcessing = (file.status || "").toLowerCase() === "processing";
               return (
