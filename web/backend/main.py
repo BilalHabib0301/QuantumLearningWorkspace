@@ -16,6 +16,7 @@ from models import SignupRequest, LoginRequest, Upload, ChatMessage, ChangePassw
 from database import get_users_collection, get_uploads_collection, get_chat_history_collection,get_quiz_results_collection
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email, verify_internal_service_key
 from routes.chat import router as chat_router
+from routes.oauth import router as oauth_router
 import httpx
 
 app = FastAPI(title="StudyMind AI Backend")
@@ -28,6 +29,7 @@ app.add_middleware(
 )
 
 app.include_router(chat_router)
+app.include_router(oauth_router)
 
 UPLOAD_DIRECTORY = "uploaded_files"
 async def process_file_ingestion(file_id, filename: str, user_id: str):

@@ -342,3 +342,10 @@
 [data-theme="light"] .auth-social-btn:hover {
   background: #f8fafc;
 }
+
+.auth-social-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}

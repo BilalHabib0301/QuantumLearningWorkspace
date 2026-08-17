@@ -5,6 +5,31 @@ import "./AuthPage.css";
 
 const API_BASE = "http://localhost:8000";
 
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48">
+      <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12
+        c0-6.627,5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24
+        c0,11.045,8.955,20,20,20c11.045,0,20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z"/>
+      <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039
+        l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z"/>
+      <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36
+        c-5.202,0-9.619-3.317-11.283-7.946l-6.522,5.025C9.505,39.556,16.227,44,24,44z"/>
+      <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.571
+        c0.001-0.001,0.002-0.001,0.003-0.002l6.19,5.238C36.971,39.205,44,34,44,24
+        C44,22.659,43.862,21.35,43.611,20.083z"/>
+    </svg>
+  );
+}
+
+function GitHubIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 0.297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385 0.6 0.113 0.82-0.258 0.82-0.577 0-0.285-0.01-1.04-0.015-2.04-3.338 0.724-4.042-1.61-4.042-1.61-0.546-1.385-1.333-1.755-1.333-1.755-1.089-0.744 0.083-0.729 0.083-0.729 1.205 0.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492 0.997 0.108-0.775 0.418-1.305 0.762-1.605-2.665-0.3-5.466-1.332-5.466-5.93 0-1.31 0.469-2.381 1.236-3.221-0.124-0.303-0.535-1.523 0.117-3.176 0 0 1.008-0.322 3.301 1.23 0.957-0.266 1.983-0.399 3.003-0.404 1.02 0.005 2.047 0.138 3.006 0.404 2.291-1.552 3.297-1.23 3.297-1.23 0.653 1.653 0.242 2.873 0.118 3.176 0.77 0.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.625-5.479 5.921 0.43 0.372 0.814 1.103 0.814 2.222 0 1.606-0.014 2.898-0.014 3.293 0 0.321 0.217 0.694 0.825 0.576 4.765-1.588 8.199-6.084 8.199-11.385 0-6.627-5.373-12-12-12z"/>
+    </svg>
+  );
+}
+
 function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
   const [mode, setMode] = useState(initialMode);
   const [email, setEmail] = useState("");
@@ -49,6 +74,14 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
       setIsError(true);
       setMessage("Could not reach the server. Is the backend running?");
     }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = `${API_BASE}/auth/google/login`;
+  };
+
+  const handleGithubLogin = () => {
+    window.location.href = `${API_BASE}/auth/github/login`;
   };
 
   return (
@@ -183,8 +216,14 @@ function AuthPage({ initialMode = "login", onLoginSuccess, onBackToHome }) {
 
           <div className="auth-divider">or continue with</div>
           <div className="auth-social-row">
-            <button className="auth-social-btn">G Google</button>
-            <button className="auth-social-btn">GitHub</button>
+            <button type="button" className="auth-social-btn" onClick={handleGoogleLogin}>
+              <GoogleIcon />
+              Google
+            </button>
+            <button type="button" className="auth-social-btn" onClick={handleGithubLogin}>
+              <GitHubIcon />
+              GitHub
+            </button>
           </div>
         </div>
       </div>
