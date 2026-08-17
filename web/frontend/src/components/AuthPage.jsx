@@ -3,7 +3,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import "./AuthPage.css";
 
-const API_BASE = "http://localhost:8000";
+const API_BASE = "http://localhost:5000";
 
 function GoogleIcon() {
   return (
