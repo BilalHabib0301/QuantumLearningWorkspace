@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import LogoutModal from "./LogoutModal.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import "./ProfileView.css";
 
 export default function ProfileView({ onRequestLogout }) {
