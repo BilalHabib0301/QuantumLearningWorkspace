@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
@@ -23,6 +23,20 @@ function AppContent() {
   const handleLoginSuccess = (accessToken) => {
     login(accessToken);
   };
+
+  // Catch the redirect from Google/GitHub OAuth (backend sends us to /oauth-success?token=...)
+  useEffect(() => {
+    if (window.location.pathname === "/oauth-success") {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      if (token) {
+        login(token);
+      }
+      // Clean the URL back to normal, so refreshing doesn't re-trigger this
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
   if (isLoggedIn) {
     return <LoggedInView />;
   }
