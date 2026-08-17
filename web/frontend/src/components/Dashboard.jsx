@@ -5,6 +5,7 @@ import ProfileView from "./ProfileView.jsx";
 import QuizView from "./QuizView.jsx";
 import QuizResultsView from "./QuizResultsView.jsx";
 import LogoutModal from "./LogoutModal.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import "./Dashboard.css";
 import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
 
