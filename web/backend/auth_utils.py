@@ -10,10 +10,16 @@ from jose import jwt, JWTError
 
 load_dotenv()
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev_secret_key_quantum_learning_workspace")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY environment variable is missing! Server halting.")
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60
-INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "dev_internal_service_key_quantum_learning_workspace")
+
+INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY")
+if not INTERNAL_SERVICE_KEY:
+    raise RuntimeError("INTERNAL_SERVICE_KEY environment variable is missing! Server halting.")
 
 bearer_scheme = HTTPBearer()
 

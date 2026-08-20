@@ -1,13 +1,27 @@
 from __future__ import annotations
 
 import os
+import time
+import json
 import httpx
-import logging
+from dotenv import load_dotenv
 
-from fastapi import APIRouter, HTTPException, Request
-from models import AskRequest, HistoryMessage
+from fastapi import APIRouter, HTTPException, Request, Depends
+from pydantic import BaseModel
+from typing import Optional
 
-logger = logging.getLogger("uvicorn")
+from auth_utils import get_current_user_email
+
+load_dotenv()
+
+CHATBOT_SERVICE_URL = os.getenv("CHATBOT_SERVICE_URL", "http://localhost:8000")
+
+try:
+    from groq import AsyncGroq
+    HAS_GROQ = True
+except ImportError:
+    HAS_GROQ = False
+
 router = APIRouter()
 
 CHATBOT_SERVICE_URL = os.getenv("CHATBOT_SERVICE_URL", "http://127.0.0.1:8000")
@@ -16,15 +30,14 @@ CHATBOT_SERVICE_URL = os.getenv("CHATBOT_SERVICE_URL", "http://127.0.0.1:8000")
 # ---------------- Proxy Endpoint ----------------
 
 @router.post("/ask")
-async def ask(request: AskRequest, req: Request):
-    # Prefer user_id from request body.
-    # If not available, use X-User-Id header.
-    # Finally, fall back to guest.
-    resolved_user_id = (
-        request.user_id
-        or req.headers.get("X-User-Id")
-        or "guest"
-    )
+async def ask(
+    request: AskRequest,
+    current_user_email: str = Depends(get_current_user_email)
+):
+
+    # Strictly derive user_id from the authenticated JWT session (email) only.
+    # Client-supplied user_id or X-User-Id is strictly stripped/ignored for security (P0-2).
+    resolved_user_id = current_user_email
 
     # Build payload for chatbot service
     payload = {

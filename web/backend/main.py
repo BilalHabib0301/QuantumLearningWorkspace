@@ -66,8 +66,7 @@ app.include_router(quiz_router)
 
 
 UPLOAD_DIRECTORY = "uploaded_files"
-INGESTION_SERVICE_URL = os.getenv("INGESTION_SERVICE_URL", "http://127.0.0.1:8001")
-
+INGESTION_SERVICE_URL = os.getenv("INGESTION_SERVICE_URL", "http://localhost:8001")
 
 async def process_file_ingestion(file_id, filename: str, user_id: str):
     """Forward the uploaded file to the ingestion service for chunking + embedding."""
