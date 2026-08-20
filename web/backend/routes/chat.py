@@ -1,38 +1,22 @@
 from __future__ import annotations
 
+import os
 import httpx
+import logging
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
-from typing import Optional
+from models import AskRequest, HistoryMessage
 
+logger = logging.getLogger("uvicorn")
 router = APIRouter()
 
-
-# ---------------- Request Models ----------------
-
-class HistoryMessage(BaseModel):
-    role: str
-    content: str
-
-
-class AskRequest(BaseModel):
-    question: str
-    user_id: Optional[str] = None
-    filename: Optional[str] = None
-    history: Optional[list[HistoryMessage]] = None
-    top_k: Optional[int] = 4
-    include_sources: Optional[bool] = True
-    rerank: Optional[bool] = True
-    multi_hop: Optional[bool] = True
-    skip_cache: Optional[bool] = False
+CHATBOT_SERVICE_URL = os.getenv("CHATBOT_SERVICE_URL", "http://127.0.0.1:8000")
 
 
 # ---------------- Proxy Endpoint ----------------
 
 @router.post("/ask")
 async def ask(request: AskRequest, req: Request):
-
     # Prefer user_id from request body.
     # If not available, use X-User-Id header.
     # Finally, fall back to guest.
@@ -60,26 +44,25 @@ async def ask(request: AskRequest, req: Request):
         "skip_cache": request.skip_cache,
     }
 
-    print("PROXY PAYLOAD:", payload)
-
     # Only send filename when it is actually provided
     if request.filename:
         payload["filename"] = request.filename
+
+    target_url = f"{CHATBOT_SERVICE_URL.rstrip('/')}/ask"
 
     try:
         # Chatbot can take 20-30+ seconds because of
         # retrieval + reranking + multi-hop + LLM generation.
         timeout = httpx.Timeout(
             connect=10.0,
-            read=60.0,
+            read=90.0,
             write=10.0,
             pool=10.0,
         )
 
         async with httpx.AsyncClient(timeout=timeout) as client:
-
             response = await client.post(
-                "http://127.0.0.1:8000/ask",
+                target_url,
                 json=payload,
             )
 
@@ -87,13 +70,18 @@ async def ask(request: AskRequest, req: Request):
         if response.status_code == 200:
             return response.json()
 
-        # Chatbot returned an error
-        print("CHATBOT STATUS:", response.status_code)
-        print("CHATBOT RESPONSE:", response.text)
+        # Chatbot returned an error status code
+        error_detail = response.text
+        try:
+            err_json = response.json()
+            if isinstance(err_json, dict) and "detail" in err_json:
+                error_detail = err_json["detail"]
+        except Exception:
+            pass
 
         raise HTTPException(
             status_code=response.status_code,
-            detail=response.text,
+            detail=error_detail,
         )
 
     # Preserve HTTPException raised above
@@ -102,31 +90,26 @@ async def ask(request: AskRequest, req: Request):
 
     # Chatbot took longer than read timeout
     except httpx.ReadTimeout as e:
-        print("CHATBOT CONNECTION ERROR: ReadTimeout")
-        print("ERROR:", repr(e))
-
+        logger.warning(f"Chatbot connection timeout: {e}")
         raise HTTPException(
             status_code=504,
-            detail="Chatbot took too long to respond.",
+            detail="Chatbot took too long to respond. Please try again.",
         )
 
     # Could not connect to chatbot service
     except httpx.ConnectError as e:
-        print("CHATBOT CONNECTION ERROR: ConnectError")
-        print("ERROR:", repr(e))
-
+        logger.warning(f"Chatbot connection error: {e}")
         raise HTTPException(
             status_code=503,
             detail=(
                 "Chatbot service is unavailable. "
-                "Please make sure the chatbot server is running on port 8000."
+                f"Please make sure the chatbot server is running on {CHATBOT_SERVICE_URL}."
             ),
         )
 
     # Any other unexpected error
     except Exception as e:
-        print("CHATBOT CONNECTION ERROR:", repr(e))
-
+        logger.error(f"Chatbot unexpected error: {e}")
         raise HTTPException(
             status_code=503,
             detail=(
