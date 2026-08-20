@@ -32,6 +32,8 @@ app.include_router(chat_router)
 app.include_router(oauth_router)
 
 UPLOAD_DIRECTORY = "uploaded_files"
+INGESTION_SERVICE_URL = os.getenv("INGESTION_SERVICE_URL", "http://localhost:8001")
+
 async def process_file_ingestion(file_id, filename: str, user_id: str):
     """Forward the uploaded file to Team Lambda's ingestion service for real chunking + embedding."""
     uploads = get_uploads_collection()
@@ -42,7 +44,7 @@ async def process_file_ingestion(file_id, filename: str, user_id: str):
         with open(file_path, "rb") as f:
             async with httpx.AsyncClient(timeout=60) as client:
                 response = await client.post(
-                    "http://127.0.0.1:8001/ingest/pdf",  
+                    f"{INGESTION_SERVICE_URL}/ingest/pdf",  
                     files={"file": (filename, f, "application/pdf")},
                     data={"user_id": user_id},
                 )
