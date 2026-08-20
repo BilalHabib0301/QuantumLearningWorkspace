@@ -11,3 +11,4 @@ uploaded_files/
 shared_chroma_data/
 test_sample*.pdf
 test_isolation.py
+mongodb_data/

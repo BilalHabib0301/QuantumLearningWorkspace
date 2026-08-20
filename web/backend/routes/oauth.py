@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 import httpx
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import RedirectResponse
@@ -75,6 +76,7 @@ async def google_callback(code: str):
             "email": email,
             "hashed_password": None,
             "auth_provider": "google",
+            "created_at": datetime.now(timezone.utc).strftime("%B %d, %Y"),
         })
 
     jwt_token = create_access_token(email=email)
@@ -144,6 +146,7 @@ async def github_callback(code: str):
             "email": email,
             "hashed_password": None,
             "auth_provider": "github",
+            "created_at": datetime.now(timezone.utc).strftime("%B %d, %Y"),
         })
 
     jwt_token = create_access_token(email=email)
