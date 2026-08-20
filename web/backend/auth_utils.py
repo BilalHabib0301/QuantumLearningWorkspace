@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta
+from typing import Optional
+from datetime import datetime, timedelta, timezone
 import bcrypt
 
 from dotenv import load_dotenv
@@ -14,8 +15,6 @@ JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60
 INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "dev_internal_service_key_quantum_learning_workspace")
 
-# This tells FastAPI: "expect a token to arrive via the Authorization header,
-# and here's the endpoint where a token could originally be obtained (/login)."
 bearer_scheme = HTTPBearer()
 
 
@@ -35,7 +34,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(email: str) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     return token
@@ -59,7 +58,8 @@ def get_current_user_email(
     except JWTError:
         raise credentials_error
 
-def verify_internal_service_key(x_internal_key: str = None) -> bool:
+
+def verify_internal_service_key(x_internal_key: Optional[str] = None) -> bool:
     """Verify the internal service key for backend-to-backend communication."""
     if not x_internal_key:
         raise HTTPException(

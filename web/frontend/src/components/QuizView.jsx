@@ -15,14 +15,13 @@ export default function QuizView() {
   const [generateError, setGenerateError] = useState("");
 
   // Quiz Display State
+  const [quizId, setQuizId] = useState("");
   const [questions, setQuestions] = useState([]);
-  const [answers, setAnswers] = useState([]);
   const [userAnswers, setUserAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
   const API_BASE = "http://localhost:8000";
-  const QUIZ_SERVICE_BASE = "http://127.0.0.1:8002";
 
   // Handle quiz generation
   const handleGenerateQuiz = async (e) => {
@@ -37,11 +36,16 @@ export default function QuizView() {
     setIsGenerating(true);
 
     try {
-      const response = await fetch(`${QUIZ_SERVICE_BASE}/generate-quiz`, {
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`${API_BASE}/generate-quiz`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers,
         body: JSON.stringify({
           topic: topic.trim(),
           question_count: parseInt(questionCount),
@@ -49,9 +53,11 @@ export default function QuizView() {
         }),
       });
 
+      if (handle401(response)) return;
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to generate quiz");
+        throw new Error(errorData.detail || errorData.message || "Failed to generate quiz");
       }
 
       const data = await response.json();
@@ -60,8 +66,8 @@ export default function QuizView() {
         throw new Error(data.message || "Quiz generation failed");
       }
 
+      setQuizId(data.quiz_id || "");
       setQuestions(data.questions || []);
-      setAnswers(data.answers || []);
       setUserAnswers({});
       showToast(`Generated ${data.questions?.length || 0} questions!`, "success");
     } catch (err) {
@@ -81,7 +87,7 @@ export default function QuizView() {
     }));
   };
 
-  // Handle quiz submission
+  // Handle quiz submission (Server-Side Graded)
   const handleSubmitQuiz = async (e) => {
     e.preventDefault();
     setSubmitError("");
@@ -96,46 +102,40 @@ export default function QuizView() {
     setIsSubmitting(true);
 
     try {
-      // Prepare quiz results
-      const results = questions.map((question) => {
-        const correctAnswer = answers.find((a) => a.question_id === question.question_id);
-        const userAnswer = userAnswers[question.question_id];
-        const isCorrect = userAnswer?.toLowerCase().trim() === correctAnswer?.answer?.toLowerCase().trim();
-
-        return {
-          question_id: question.question_id,
-          topic: topic,
-          selected_answer: userAnswer,
-          correct_answer: correctAnswer?.answer || "",
-          is_correct: isCorrect,
-        };
-      });
-
-      // Save results to backend
-      const response = await fetch(`${API_BASE}/quiz-results`, {
+      // Submit user answers for server-side grading and history storage
+      const response = await fetch(`${API_BASE}/submit-quiz`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ results }),
+        body: JSON.stringify({
+          quiz_id: quizId,
+          topic: topic,
+          answers: userAnswers,
+        }),
       });
 
       if (handle401(response)) return;
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || "Failed to save quiz results");
+        throw new Error(errorData.detail || "Failed to submit and grade quiz");
       }
 
-      showToast("Quiz submitted successfully!", "success");
+      const gradedData = await response.json();
+      const scoreMsg = gradedData.score !== undefined
+        ? `Quiz submitted! Score: ${gradedData.score}/${gradedData.total} (${gradedData.percentage}%)`
+        : "Quiz submitted successfully!";
+
+      showToast(scoreMsg, "success");
 
       // Reset form
       setTopic("");
       setQuizType("mcq");
       setQuestionCount(5);
+      setQuizId("");
       setQuestions([]);
-      setAnswers([]);
       setUserAnswers({});
     } catch (err) {
       const errorMsg = err.message || "Failed to submit quiz";
@@ -246,7 +246,7 @@ export default function QuizView() {
           className="btn-back-quiz"
           onClick={() => {
             setQuestions([]);
-            setAnswers([]);
+            setQuizId("");
             setUserAnswers({});
             setTopic("");
           }}
