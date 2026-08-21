@@ -15,7 +15,9 @@ class QuizService:
     """
 
     def __init__(self):
-        # Initialize the Embedder to search Pinecone and MongoDB
+        # [P0-1 fix] Embedder now searches the shared ChromaDB store —
+        # the same one ingestion writes to — instead of the old,
+        # disconnected Pinecone + MongoDB path.
         self.embedder = Embedder()
 
         # Initialize the AI Generators
@@ -30,22 +32,33 @@ class QuizService:
         self,
         topic: str,
         question_type: str,
+        user_id: str,
         number_of_questions: int = 5,
         difficulty: str = "medium",
         top_k: int = 3,
     ) -> dict:
         """
         RAG PIPELINE (The Bridge in action):
-        1. Search: Finds relevant text chunks in the Vector Store.
-        2. Retrieve: Fetches full text from MongoDB.
-        3. Generate: Feeds that specific text to the LLM to get structured questions.
+        1. Search: Finds relevant text chunks in the shared ChromaDB store,
+           scoped to the authenticated user (Contract v1 Section 10 —
+           quiz retrieval MUST be filtered by user_id).
+        2. Generate: Feeds that specific text to the LLM to get structured questions.
 
-        Returns a dict with two SEPARATE lists:
-          - "questions": what the frontend shows the user (no answers included)
-          - "answers": question_id -> correct answer, used only at grading time
+        [Contract v1] Per Section 10, the existing question/answer split
+        stays as-is: this returns BOTH a "questions" list (no answers)
+        and an "answers" list (matched by question_id) — the shape
+        Pluto's proxy already expects and stores server-side for
+        grading. Do not strip "answers" from this return value; that
+        was an earlier draft fix that turned out to contradict the
+        signed-off contract.
+
+        user_id is REQUIRED and must come from a verified JWT
+        (see auth.py) — never from client input — so the search below
+        can never cross into another user's content.
         """
-        # A. Search for context based on the user's topic
-        search_results = self.embedder.search(topic, top_k=top_k)
+        # A. Search for context based on the user's topic, scoped to
+        #    this user's own content only.
+        search_results = self.embedder.search(topic, top_k=top_k, user_id=user_id)
 
         if not search_results:
             return {
@@ -96,7 +109,9 @@ class QuizService:
         """
         Splits a list of Question objects into two separate lists:
         one safe to send to the frontend before submission (no answers),
-        and one kept server-side for grading.
+        and one kept server-side for grading. Per Contract v1 Section 10,
+        this split — and its presence in the /generate-quiz response —
+        is the intended, documented design; it is not being removed.
         """
         public_questions = []
         answers = []

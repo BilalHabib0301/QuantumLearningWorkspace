@@ -2,21 +2,25 @@ import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useToast } from "../context/ToastContext.jsx";
 import ProfileView from "./ProfileView.jsx";
-import SettingsView from "./SettingsView.jsx";
+import QuizView from "./QuizView.jsx";
+import QuizResultsView from "./QuizResultsView.jsx";
+import LogoutModal from "./LogoutModal.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import "./Dashboard.css";
 import DocumentPreviewModal from "./DocumentPreviewModal.jsx";
 
 // ─── Sub-Components ──────────────────────────────────────────────────────────
 
-function SidebarNav({ activeTab, setActiveTab }) {
-  const { logout, userEmail } = useAuth();
+function SidebarNav({ activeTab, setActiveTab, onRequestLogout }) {
+  const { userEmail } = useAuth();
   const initial = userEmail ? userEmail[0].toUpperCase() : "U";
 
   const navItems = [
     { id: "documents", icon: "📄", label: "Documents" },
     { id: "chat", icon: "💬", label: "AI Chat" },
+    { id: "quiz", icon: "🎯", label: "Quiz" },
+    { id: "results", icon: "📊", label: "Results" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
-    { id: "profile", icon: "👤", label: "Profile" },
   ];
 
   return (
@@ -31,13 +35,13 @@ function SidebarNav({ activeTab, setActiveTab }) {
         {navItems.map((item) => (
           <button
             key={item.id}
-            className={`nav-btn ${activeTab === item.id || (item.id === "profile" && activeTab === "settings") ? "active" : ""}`}
+            className={`nav-btn ${activeTab === item.id ? "active" : ""}`}
             onClick={() => setActiveTab(item.id)}
             title={item.label}
           >
             <span className="nav-icon">{item.icon}</span>
             <span className="nav-tooltip">{item.label}</span>
-            {(activeTab === item.id || (item.id === "profile" && activeTab === "settings")) && (
+            {activeTab === item.id && (
               <span className="nav-indicator"></span>
             )}
           </button>
@@ -47,14 +51,19 @@ function SidebarNav({ activeTab, setActiveTab }) {
       {/* Bottom: User + Logout */}
       <div className="sidebar-bottom">
         <div
-          className="user-avatar-circle"
+          className={`user-avatar-circle ${activeTab === "profile" || activeTab === "settings" ? "active-profile-avatar" : ""}`}
           onClick={() => setActiveTab("profile")}
-          title={`${userEmail || "User"} (Click for Profile)`}
-          style={{ cursor: "pointer" }}
+          style={{ cursor: "pointer", position: "relative" }}
         >
           {initial}
+          <span className="nav-tooltip">Profile</span>
         </div>
-        <button className="logout-icon-btn" onClick={logout} title="Logout">
+        <button
+          className="logout-icon-btn"
+          onClick={onRequestLogout}
+          title="Logout"
+          type="button"
+        >
           <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
@@ -80,6 +89,14 @@ function TopBar({ activeTab }) {
       title: "AI Assistant",
       subtitle: "Ask questions about your uploaded study materials",
     },
+    quiz: {
+      title: "Quiz",
+      subtitle: "Test your knowledge with AI-generated quizzes",
+    },
+    results: {
+      title: "Quiz Results",
+      subtitle: "View your quiz history and track your progress",
+    },
     graph: {
       title: "Knowledge Graph",
       subtitle: "Visualize connections between concepts in your materials",
@@ -102,37 +119,40 @@ function TopBar({ activeTab }) {
         <h1 className="top-bar-title">{title}</h1>
         <p className="top-bar-subtitle">{subtitle}</p>
       </div>
-      <div
-        className="user-badge"
-        style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "10px",
-          padding: "8px 14px",
-          background: "rgba(124,58,237,0.06)",
-          border: "1px solid rgba(124,58,237,0.15)",
-          borderRadius: "10px",
-        }}
-      >
+      <div className="top-bar-right" style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+        <ThemeToggle />
         <div
+          className="user-badge"
           style={{
-            width: "28px",
-            height: "28px",
-            background: "linear-gradient(135deg, #7c3aed, #ec4899)",
-            borderRadius: "50%",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
-            fontSize: "0.72rem",
-            fontWeight: "700",
-            color: "white",
+            gap: "10px",
+            padding: "8px 14px",
+            background: "var(--color-surface-hover, rgba(124,58,237,0.06))",
+            border: "1px solid var(--color-card-border, rgba(124,58,237,0.15))",
+            borderRadius: "10px",
           }}
         >
-          {initial}
+          <div
+            style={{
+              width: "28px",
+              height: "28px",
+              background: "linear-gradient(135deg, #7c3aed, #ec4899)",
+              borderRadius: "50%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "0.72rem",
+              fontWeight: "700",
+              color: "white",
+            }}
+          >
+            {initial}
+          </div>
+          <span style={{ fontSize: "0.85rem", fontWeight: "500", color: "var(--color-text-primary)" }}>
+            {displayName}
+          </span>
         </div>
-        <span style={{ fontSize: "0.85rem", fontWeight: "500", color: "#f8fafc" }}>
-          {displayName}
-        </span>
       </div>
     </header>
   );
@@ -157,6 +177,7 @@ function DocumentsView({ onAskAboutDocument }) {
   const [statusFilter, setStatusFilter] = useState("All");
   const [sortOption, setSortOption] = useState("Newest");
 
+  
   const API_BASE = "http://localhost:5000";
 
   function fetchUploads(isSilent = false) {
@@ -186,6 +207,24 @@ function DocumentsView({ onAskAboutDocument }) {
     if (!selectedFile) {
       setUploadMsg("Please choose a file first.");
       setUploadStatus("error");
+      showToast("Please choose a file first.", "error");
+      return;
+    }
+
+    if (!selectedFile.name.toLowerCase().endsWith(".pdf")) {
+      const msg = "Only PDF files (.pdf) are currently supported.";
+      setUploadMsg(msg);
+      setUploadStatus("error");
+      showToast(msg, "error");
+      return;
+    }
+
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (selectedFile.size > MAX_SIZE) {
+      const msg = "File size exceeds the 10MB limit.";
+      setUploadMsg(msg);
+      setUploadStatus("error");
+      showToast(msg, "error");
       return;
     }
 
@@ -217,9 +256,12 @@ function DocumentsView({ onAskAboutDocument }) {
         fetchUploads(true);
       })
       .catch((err) => {
-        setUploadMsg(err.message || "Something went wrong.");
+        const errorText = err.message === "Failed to fetch"
+          ? "Network error — failed to upload file. Please check your connection."
+          : (err.message || "Something went wrong.");
+        setUploadMsg(errorText);
         setUploadStatus("error");
-        showToast(err.message || "Upload failed", "error");
+        showToast(errorText, "error");
       })
       .finally(() => {
         setUploading(false);
@@ -379,8 +421,8 @@ function DocumentsView({ onAskAboutDocument }) {
         {!loading && !error && files.length === 0 && (
           <div className="empty-state">
             <span className="empty-icon">📚</span>
-            <p className="empty-title">No documents yet</p>
-            <p className="empty-subtitle">Upload your first PDF to get started</p>
+            <p className="empty-title">No documents yet - upload your first file to get started</p>
+            <p className="empty-subtitle">Upload your first PDF to start studying with AI</p>
           </div>
         )}
 
@@ -436,7 +478,10 @@ function DocumentsView({ onAskAboutDocument }) {
                     onClick={() => setPreviewId(file.id)}
                     title="Preview document details"
                   >
-                    👁️
+                    <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+                      <circle cx="12" cy="12" r="3" fill="currentColor" />
+                    </svg>
                   </button>
 
                   <button
@@ -539,8 +584,8 @@ function ChatView({ targetDocument, setTargetDocument }) {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
+  
   const API_BASE = "http://localhost:5000";
-  const CHATBOT_BASE = "http://127.0.0.1:8000";
 
   const getStorageKey = () => {
     return userEmail ? `studymind_chat_history_${userEmail}` : "studymind_chat_history";
@@ -683,7 +728,6 @@ function ChatView({ targetDocument, setTargetDocument }) {
         },
         body: JSON.stringify({
           question: userMessage.content,
-           user_id: userEmail,
           history: apiHistory,
           top_k: 4,
           include_sources: true,
@@ -711,6 +755,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
         role: "assistant",
         content: "Sorry, I had trouble reaching the AI server. Please make sure the backend is running.",
         isError: true,
+        failedQuestion: userMessage.content,
         timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
       };
       setMessages((prev) => [...prev, errorMessage]);
@@ -753,7 +798,7 @@ function ChatView({ targetDocument, setTargetDocument }) {
             onChange={(e) => setTargetDocument(e.target.value || null)}
             className="chat-doc-select"
           >
-            <option value="">All Searchable Documents</option>
+            <option value="">All Documents</option>
             {files.map((file) => {
               const isProcessing = (file.status || "").toLowerCase() === "processing";
               return (
@@ -800,6 +845,35 @@ function ChatView({ targetDocument, setTargetDocument }) {
                 } ${msg.isError ? "bubble-error" : ""}`}
               >
                 <div className="msg-content">{msg.content}</div>
+
+                {msg.isError && (
+                  <div style={{ marginTop: "10px", paddingTop: "8px", borderTop: "1px solid rgba(239, 68, 68, 0.25)" }}>
+                    <button
+                      className="btn-retry-chat"
+                      style={{
+                        background: "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                        color: "#ffffff",
+                        fontWeight: "600",
+                        padding: "6px 14px",
+                        borderRadius: "8px",
+                        cursor: "pointer",
+                        fontSize: "0.82rem",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        boxShadow: "0 2px 8px rgba(239, 68, 68, 0.35)",
+                        border: "none"
+                      }}
+                      onClick={() => {
+                        if (msg.failedQuestion) {
+                          setInput(msg.failedQuestion);
+                        }
+                      }}
+                    >
+                      <span style={{ fontSize: "0.9rem" }}>↺</span> Retry
+                    </button>
+                  </div>
+                )}
 
                 {msg.sources && msg.sources.length > 0 && (
                   <div className="msg-sources">
@@ -881,15 +955,26 @@ function GraphView() {
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("documents");
   const [targetDocument, setTargetDocument] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { logout } = useAuth();
 
   const handleAskAboutDocument = (filename) => {
     setTargetDocument(filename);
     setActiveTab("chat");
   };
 
+  const handleConfirmLogout = () => {
+    setShowLogoutModal(false);
+    logout();
+  };
+
   return (
     <div className="app-shell">
-      <SidebarNav activeTab={activeTab} setActiveTab={setActiveTab} />
+      <SidebarNav
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onRequestLogout={() => setShowLogoutModal(true)}
+      />
       <div className="main-area">
         <TopBar activeTab={activeTab} />
         <div className="page-content">
@@ -902,10 +987,19 @@ export default function Dashboard() {
               setTargetDocument={setTargetDocument}
             />
           )}
+          {activeTab === "quiz" && <QuizView />}
+          {activeTab === "results" && <QuizResultsView />}
           {activeTab === "graph" && <GraphView />}
-          {(activeTab === "profile" || activeTab === "settings") && <ProfileView />}
+          {(activeTab === "profile" || activeTab === "settings") && (
+            <ProfileView onRequestLogout={() => setShowLogoutModal(true)} />
+          )}
         </div>
       </div>
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={handleConfirmLogout}
+      />
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
 import { AuthProvider, useAuth } from "./context/AuthContext.jsx";
 import { ToastProvider } from "./context/ToastContext.jsx";
+import { ThemeProvider } from "./context/ThemeContext.jsx";
 import LandingPage from "./components/LandingPage.jsx";
 import Login from "./components/Login.jsx";
 import Signup from "./components/Signup.jsx";
@@ -22,6 +23,20 @@ function AppContent() {
   const handleLoginSuccess = (accessToken) => {
     login(accessToken);
   };
+
+  // Catch the redirect from Google/GitHub OAuth (backend sends us to /oauth-success?token=...)
+  useEffect(() => {
+    if (window.location.pathname === "/oauth-success") {
+      const params = new URLSearchParams(window.location.search);
+      const token = params.get("token");
+      if (token) {
+        login(token);
+      }
+      // Clean the URL back to normal, so refreshing doesn't re-trigger this
+      window.history.replaceState({}, "", "/");
+    }
+  }, []);
+
   if (isLoggedIn) {
     return <LoggedInView />;
   }
@@ -36,11 +51,13 @@ function AppContent() {
 
 function App() {
   return (
-    <ToastProvider>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </ToastProvider>
+    <ThemeProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </ToastProvider>
+    </ThemeProvider>
   );
 }
 

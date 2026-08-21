@@ -18,7 +18,21 @@ function UploadView({ onUploadSuccess }) {
 
   async function handleUploadClick() {
     if (!selectedFile) {
-      alert("Please choose a file first.");
+      setStatus("error");
+      setMessage("Please choose a file first.");
+      return;
+    }
+
+    if (!selectedFile.name.toLowerCase().endsWith(".pdf")) {
+      setStatus("error");
+      setMessage("Only PDF files (.pdf) are currently supported.");
+      return;
+    }
+
+    const MAX_SIZE = 10 * 1024 * 1024;
+    if (selectedFile.size > MAX_SIZE) {
+      setStatus("error");
+      setMessage("File size exceeds the 10MB limit.");
       return;
     }
 
@@ -28,8 +42,10 @@ function UploadView({ onUploadSuccess }) {
     const formData = new FormData();
     formData.append("file", selectedFile);
 
+    const API_BASE = `http://${window.location.hostname}:8001`;
+
     try {
-      const response = await fetch("http://localhost:5000/upload", {
+      const response = await fetch(`${API_BASE}/upload`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -56,7 +72,10 @@ function UploadView({ onUploadSuccess }) {
       if (onUploadSuccess) onUploadSuccess();
     } catch (err) {
       setStatus("error");
-      setMessage(err.message || "Something went wrong while uploading.");
+      const errorMsg = err.message === "Failed to fetch"
+        ? "Network error — failed to upload file. Please check your connection."
+        : (err.message || "Something went wrong while uploading.");
+      setMessage(errorMsg);
     }
   }
 

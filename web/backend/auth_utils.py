@@ -1,5 +1,6 @@
 import os
-from datetime import datetime, timedelta
+from typing import Optional
+from datetime import datetime, timedelta, timezone
 import bcrypt
 
 from dotenv import load_dotenv
@@ -9,12 +10,17 @@ from jose import jwt, JWTError
 
 load_dotenv()
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev_secret_key_quantum_learning_workspace")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY environment variable is missing! Server halting.")
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60
 
-# This tells FastAPI: "expect a token to arrive via the Authorization header,
-# and here's the endpoint where a token could originally be obtained (/login)."
+INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY")
+if not INTERNAL_SERVICE_KEY:
+    raise RuntimeError("INTERNAL_SERVICE_KEY environment variable is missing! Server halting.")
+
 bearer_scheme = HTTPBearer()
 
 
@@ -34,7 +40,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
 
 
 def create_access_token(email: str) -> str:
-    expire = datetime.utcnow() + timedelta(minutes=JWT_EXPIRE_MINUTES)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=JWT_EXPIRE_MINUTES)
     payload = {"sub": email, "exp": expire}
     token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
     return token
@@ -57,3 +63,18 @@ def get_current_user_email(
         return email
     except JWTError:
         raise credentials_error
+
+
+def verify_internal_service_key(x_internal_key: Optional[str] = None) -> bool:
+    """Verify the internal service key for backend-to-backend communication."""
+    if not x_internal_key:
+        raise HTTPException(
+            status_code=401,
+            detail="Missing internal service key.",
+        )
+    if x_internal_key != INTERNAL_SERVICE_KEY:
+        raise HTTPException(
+            status_code=403,
+            detail="Invalid internal service key.",
+        )
+    return True

@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext.jsx";
+import LogoutModal from "./LogoutModal.jsx";
+import ThemeToggle from "./ThemeToggle.jsx";
 import "./ProfileView.css";
 
-export default function ProfileView() {
+export default function ProfileView({ onRequestLogout }) {
   const { token, userEmail, logout, handle401 } = useAuth();
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
 
   const [profileData, setProfileData] = useState({
     email: userEmail || "user@example.com",
@@ -371,12 +374,34 @@ export default function ProfileView() {
           </form>
         </div>
 
+        {/* Appearance & Preferences Card */}
+        <div className="profile-section-card full-width">
+          <h3>🎨 Appearance & Preferences</h3>
+          <div className="info-row">
+            <div>
+              <span className="info-label" style={{ display: "block", fontSize: "0.9rem", fontWeight: "600", color: "var(--color-text-primary)" }}>Theme</span>
+              <span style={{ fontSize: "0.8rem", color: "var(--color-text-muted)" }}>Toggle between Dark (default) and Light theme</span>
+            </div>
+            <ThemeToggle showLabel={true} />
+          </div>
+        </div>
+
         {/* Session Card */}
         <div className="profile-section-card full-width">
           <h3>🚪 Session</h3>
           <div className="info-row">
             <span className="info-label">You are currently logged in</span>
-            <button className="btn-logout-profile" onClick={logout}>
+            <button
+              className="btn-logout-profile"
+              onClick={() => {
+                if (onRequestLogout) {
+                  onRequestLogout();
+                } else {
+                  setShowLogoutModal(true);
+                }
+              }}
+              type="button"
+            >
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
                 <polyline points="16 17 21 12 16 7" />
@@ -394,11 +419,21 @@ export default function ProfileView() {
           <button
             className="btn-delete-account"
             onClick={() => alert("Are you sure? This will delete your account and all data.")}
+            type="button"
           >
             Delete Account
           </button>
         </div>
       </div>
+
+      <LogoutModal
+        isOpen={showLogoutModal}
+        onClose={() => setShowLogoutModal(false)}
+        onConfirm={() => {
+          setShowLogoutModal(false);
+          logout();
+        }}
+      />
     </div>
   );
 }
