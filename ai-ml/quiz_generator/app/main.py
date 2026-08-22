@@ -7,15 +7,15 @@ Run from ai-ml/ (so the quiz_generator.* and embedding.* imports resolve):
 Interactive docs: http://127.0.0.1:8002/docs
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.middleware.cors import CORSMiddleware
+from embedding.chroma_store import delete_chunks
 
 from quiz_generator.app.models.api_models import GenerateQuizRequest, GenerateQuizResponse
 from quiz_generator.app.services.quiz_service import QuizService
-from fastapi.middleware.cors import CORSMiddleware
-
+from quiz_generator.app.auth import get_current_user_id
 
 app = FastAPI(title="StudyMind Quiz API — Team Lambda")
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,7 +41,15 @@ def health_check():
 
 
 @app.post("/generate-quiz", response_model=GenerateQuizResponse)
-def generate_quiz_endpoint(body: GenerateQuizRequest) -> GenerateQuizResponse:
+def generate_quiz_endpoint(
+    body: GenerateQuizRequest,
+    user_id: str = Depends(get_current_user_id),
+) -> GenerateQuizResponse:
+    """
+    [Contract v1, Section 10] Requires "Authorization: Bearer <jwt>".
+    user_id is derived from the verified token (never from client
+    input) and used to scope retrieval to this user's own content only.
+    """
     service = get_service()
 
     valid_types = {"mcq", "true_false", "fill_blank", "short_answer"}
@@ -55,6 +63,7 @@ def generate_quiz_endpoint(body: GenerateQuizRequest) -> GenerateQuizResponse:
         result = service.generate_quiz_from_topic(
             topic=body.topic,
             question_type=body.quiz_type,
+            user_id=user_id,
             number_of_questions=body.question_count,
         )
     except ValueError as exc:
@@ -76,3 +85,22 @@ def generate_quiz_endpoint(body: GenerateQuizRequest) -> GenerateQuizResponse:
         questions=result["questions"],
         answers=result["answers"],
     )
+
+@app.delete("/document/{document_id}")
+def delete_document_endpoint(
+    document_id: str,
+    user_id: str = Depends(get_current_user_id),
+) -> dict:
+    """
+    [P0-5] Purge all chunks for a document from the shared ChromaDB
+    store. Idempotent — calling this on an already-deleted or
+    nonexistent document_id is a safe no-op, not an error.
+
+    Requires a valid JWT (Contract v1 Section 4/10) — but note the
+    authenticated user_id is not currently cross-checked against the
+    document's own user_id metadata before deleting. That ownership
+    check should happen wherever documents/uploads are tracked
+    (Pluto's side) before calling this endpoint.
+    """
+    delete_chunks(document_id)
+    return {"success": True, "message": f"Document {document_id} purged."}
