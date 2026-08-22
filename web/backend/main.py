@@ -1,4 +1,5 @@
 import os
+import uuid
 import shutil
 import logging
 from typing import Optional, Dict, Any, List
@@ -65,32 +66,56 @@ app.include_router(oauth_router)
 app.include_router(quiz_router)
 
 
-UPLOAD_DIRECTORY = "uploaded_files"
+UPLOAD_DIRECTORY = os.getenv(
+    "UPLOAD_DIRECTORY",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "uploaded_files"),
+)
 INGESTION_SERVICE_URL = os.getenv("INGESTION_SERVICE_URL", "http://localhost:8001")
 
-async def process_file_ingestion(file_id, filename: str, user_id: str):
-    """Forward the uploaded file to the ingestion service for chunking + embedding."""
+async def process_file_ingestion(file_id, document_id: str, filename: str, user_id: str):
+    """Forward the uploaded file to the ingestion service for chunking + embedding and persist results."""
     uploads = get_uploads_collection()
-    file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+
+    # Determine file path on disk: prefer <document_id>.pdf, fallback to filename
+    file_path = os.path.join(UPLOAD_DIRECTORY, f"{document_id}.pdf") if document_id else None
+    if not file_path or not os.path.exists(file_path):
+        file_path = os.path.join(UPLOAD_DIRECTORY, filename)
 
     new_status = "Ready"
+    chunks_stored = 0
+    last_error = None
+    returned_document_id = document_id
+
     if os.path.exists(file_path):
         try:
             with open(file_path, "rb") as f:
-                async with httpx.AsyncClient(timeout=60) as client:
-                    response = await client.post(
-                        f"{INGESTION_SERVICE_URL.rstrip('/')}/ingest/pdf",
-                        files={"file": (filename, f, "application/pdf")},
-                        data={"user_id": user_id},
-                    )
-            if response.status_code != 200:
-                logger.warning(f"Ingestion service responded with {response.status_code}")
+                file_bytes = f.read()
+
+            async with httpx.AsyncClient(timeout=15) as client:
+                response = await client.post(
+                    f"{INGESTION_SERVICE_URL.rstrip('/')}/ingest/pdf",
+                    files={"file": (filename, file_bytes, "application/pdf")},
+                    data={"user_id": user_id},
+                )
+            if response.status_code == 200:
+                try:
+                    data = response.json()
+                    returned_document_id = data.get("document_id") or document_id
+                    chunks_stored = data.get("chunks_stored", 0)
+                    new_status = "Ready"
+                except Exception:
+                    new_status = "Ready"
+            else:
+                logger.warning(f"Ingestion service responded with {response.status_code}: {response.text}")
                 new_status = "Failed"
+                last_error = f"Ingestion failed ({response.status_code}): {response.text}"
         except Exception as e:
-            logger.warning(f"Ingestion error for {filename}: {e}")
+            logger.warning(f"Ingestion error for {filename} ({document_id}): {e}")
             new_status = "Failed"
+            last_error = str(e)
     else:
         new_status = "Failed"
+        last_error = "File not found on disk"
 
     query: Dict[str, Any] = {"user_id": user_id}
     if file_id:
@@ -98,10 +123,20 @@ async def process_file_ingestion(file_id, filename: str, user_id: str):
             query["_id"] = ObjectId(str(file_id))
         except Exception:
             query["_id"] = str(file_id)
+    elif document_id:
+        query["document_id"] = document_id
     else:
         query["filename"] = filename
 
-    await uploads.update_one(query, {"$set": {"status": new_status}})
+    update_fields: Dict[str, Any] = {
+        "status": new_status,
+        "document_id": returned_document_id,
+        "chunks_stored": chunks_stored,
+        "processed_at": datetime.now(timezone.utc),
+        "last_error": last_error,
+    }
+
+    await uploads.update_one(query, {"$set": update_fields})
 
 
 @app.get("/health")
@@ -203,16 +238,22 @@ async def upload_file(
 ):
     os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     filename = file.filename or "uploaded_file.pdf"
-    file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+    document_id = str(uuid.uuid4())
+    physical_filename = f"{document_id}.pdf"
+    file_path = os.path.join(UPLOAD_DIRECTORY, physical_filename)
 
     with open(file_path, "wb") as buffer:
         shutil.copyfileobj(file.file, buffer)
 
     upload_record = Upload(
         filename=filename,
+        document_id=document_id,
         file_type=file.content_type or "application/pdf",
         user_id=current_user_email.strip().lower(),
         status="Processing",
+        chunks_stored=0,
+        last_error=None,
+        processed_at=None,
     )
 
     uploads = get_uploads_collection()
@@ -222,12 +263,14 @@ async def upload_file(
     background_tasks.add_task(
         process_file_ingestion,
         file_id=inserted_id,
+        document_id=document_id,
         filename=filename,
         user_id=current_user_email.strip().lower(),
     )
 
     return {
         "message": "File uploaded successfully and ingestion pipeline started.",
+        "document_id": upload_record.document_id,
         "filename": upload_record.filename,
         "status": upload_record.status,
     }
@@ -245,12 +288,20 @@ async def get_uploads(current_user_email: str = Depends(get_current_user_email))
         upload_date = document.get("upload_date")
         if isinstance(upload_date, datetime):
             upload_date = upload_date.isoformat()
+        processed_at = document.get("processed_at")
+        if isinstance(processed_at, datetime):
+            processed_at = processed_at.isoformat()
+
         user_uploads.append({
             "id": str(document["_id"]),
+            "document_id": document.get("document_id"),
             "filename": document.get("filename", ""),
             "upload_date": upload_date,
+            "processed_at": processed_at,
             "file_type": document.get("file_type", "application/pdf"),
             "status": document.get("status", "Processing"),
+            "chunks_stored": document.get("chunks_stored", 0),
+            "last_error": document.get("last_error"),
         })
 
     return user_uploads
@@ -276,10 +327,28 @@ async def delete_upload(
             search_query = {"_id": upload_id, "user_id": email_clean}
 
     if not upload_doc:
+        # Also support deleting by document_id
+        upload_doc = await uploads.find_one({"document_id": upload_id, "user_id": email_clean})
+        if upload_doc:
+            search_query = {"document_id": upload_id, "user_id": email_clean}
+
+    if not upload_doc:
         raise HTTPException(status_code=404, detail="Upload not found")
 
+    doc_id = upload_doc.get("document_id")
     filename = upload_doc.get("filename")
-    if filename:
+    deleted_physical = False
+
+    if doc_id:
+        doc_file_path = os.path.join(UPLOAD_DIRECTORY, f"{doc_id}.pdf")
+        if os.path.exists(doc_file_path):
+            try:
+                os.remove(doc_file_path)
+                deleted_physical = True
+            except Exception as e:
+                logger.warning(f"Could not remove file {doc_file_path}: {e}")
+
+    if not deleted_physical and filename:
         file_path = os.path.join(UPLOAD_DIRECTORY, filename)
         if os.path.exists(file_path):
             try:
@@ -309,19 +378,35 @@ async def get_document_preview(
         upload_doc = await uploads.find_one({"_id": upload_id, "user_id": email_clean})
 
     if not upload_doc:
+        # Also check by document_id
+        upload_doc = await uploads.find_one({"document_id": upload_id, "user_id": email_clean})
+
+    if not upload_doc:
         raise HTTPException(status_code=404, detail="Upload not found")
 
+    doc_id = upload_doc.get("document_id")
     filename = upload_doc.get("filename", "")
-    file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+
+    # Locate physical file: check <document_id>.pdf, then fallback to filename
+    file_path = None
+    if doc_id:
+        candidate_path = os.path.join(UPLOAD_DIRECTORY, f"{doc_id}.pdf")
+        if os.path.exists(candidate_path):
+            file_path = candidate_path
+
+    if not file_path and filename:
+        candidate_path = os.path.join(UPLOAD_DIRECTORY, filename)
+        if os.path.exists(candidate_path):
+            file_path = candidate_path
 
     file_size = None
-    if os.path.exists(file_path):
+    if file_path and os.path.exists(file_path):
         size_bytes = os.path.getsize(file_path)
         file_size = f"{size_bytes / (1024 * 1024):.2f} MB"
 
     page_count = None
     word_count = None
-    if filename.lower().endswith(".pdf") and os.path.exists(file_path):
+    if file_path and (filename.lower().endswith(".pdf") or file_path.endswith(".pdf")) and os.path.exists(file_path):
         try:
             reader = PdfReader(file_path)
             page_count = len(reader.pages)
@@ -337,12 +422,19 @@ async def get_document_preview(
     upload_date = upload_doc.get("upload_date")
     if isinstance(upload_date, datetime):
         upload_date = upload_date.isoformat()
+    processed_at = upload_doc.get("processed_at")
+    if isinstance(processed_at, datetime):
+        processed_at = processed_at.isoformat()
 
     return {
         "id": str(upload_doc["_id"]),
+        "document_id": doc_id,
         "filename": filename,
         "upload_date": upload_date,
+        "processed_at": processed_at,
         "status": upload_doc.get("status", "Processing"),
+        "chunks_stored": upload_doc.get("chunks_stored", 0),
+        "last_error": upload_doc.get("last_error"),
         "file_size": file_size,
         "page_count": page_count,
         "word_count": word_count,
