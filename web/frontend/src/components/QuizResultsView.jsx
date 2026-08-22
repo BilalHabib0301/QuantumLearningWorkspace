@@ -13,7 +13,7 @@ export default function QuizResultsView() {
   const [selectedResult, setSelectedResult] = useState(null);
   const [filterTopic, setFilterTopic] = useState("All");
 
-  const API_BASE = "http://localhost:8000";
+  const API_BASE = "http://localhost:5000";
 
   // Fetch quiz results
   useEffect(() => {

@@ -22,9 +22,12 @@ try:
 except ImportError:
     HAS_GROQ = False
 
-router = APIRouter()
+class AskRequest(BaseModel):
+    question: str
+    target_document: Optional[str] = None
+    user_id: Optional[str] = None
 
-CHATBOT_SERVICE_URL = os.getenv("CHATBOT_SERVICE_URL", "http://127.0.0.1:8000")
+router = APIRouter()
 
 
 # ---------------- Proxy Endpoint ----------------

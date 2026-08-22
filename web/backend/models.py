@@ -38,6 +38,10 @@ class Upload(BaseModel):
     status: str = Field(default="Processing")
     metadata: Optional[dict] = None
     user_id: str
+    document_id: Optional[str] = None
+    chunks_stored: Optional[int] = 0
+    last_error: Optional[str] = None
+    processed_at: Optional[datetime] = None
 
 
 class ChatMessage(BaseModel):
