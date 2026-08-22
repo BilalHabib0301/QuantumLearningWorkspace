@@ -335,6 +335,7 @@ async def delete_upload(
     if not upload_doc:
         raise HTTPException(status_code=404, detail="Upload not found")
 
+<<<<<<< HEAD
     doc_id = upload_doc.get("document_id")
     filename = upload_doc.get("filename")
     deleted_physical = False
@@ -350,15 +351,43 @@ async def delete_upload(
 
     if not deleted_physical and filename:
         file_path = os.path.join(UPLOAD_DIRECTORY, filename)
+=======
+    # 1. Purge vector embeddings from ChromaDB via Lambda Ingestion service
+    document_id = upload_doc.get("document_id") or str(upload_doc.get("_id"))
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            purge_url = f"{INGESTION_SERVICE_URL.rstrip('/')}/documents/{document_id}"
+            purge_res = await client.delete(
+                purge_url,
+                params={"user_id": email_clean},
+            )
+            if purge_res.status_code not in (200, 204, 404):
+                logger.warning(
+                    f"Vector purge for doc {document_id} returned status {purge_res.status_code}: {purge_res.text}"
+                )
+    except Exception as e:
+        logger.warning(f"Failed to connect to ingestion service for vector purge: {e}")
+
+    # 2. Delete local physical file
+    possible_filenames = []
+    if upload_doc.get("document_id"):
+        possible_filenames.append(f"{upload_doc['document_id']}.pdf")
+    if upload_doc.get("filename"):
+        possible_filenames.append(upload_doc["filename"])
+
+    for fname in possible_filenames:
+        file_path = os.path.join(UPLOAD_DIRECTORY, fname)
+>>>>>>> e8f8bd4 (feat(backend): call lambda vector purge API in delete_upload and add unit tests)
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
             except Exception as e:
                 logger.warning(f"Could not remove file {file_path}: {e}")
 
+    # 3. Delete MongoDB record
     await uploads.delete_one(search_query)
-    return {"message": "Upload deleted successfully"}
-
+    return {"message": "Upload and vector embeddings deleted successfully"}
 
 @app.get("/uploads/{upload_id}/preview")
 async def get_document_preview(
