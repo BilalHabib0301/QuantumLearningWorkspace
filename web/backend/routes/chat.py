@@ -6,10 +6,10 @@ from typing import Optional, List, Dict, Any
 import httpx
 from dotenv import load_dotenv
 
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
 from pydantic import BaseModel
 
-from auth_utils import get_current_user_email
+from auth_utils import get_current_user_email, create_access_token
 
 load_dotenv()
 
@@ -40,6 +40,7 @@ class AskRequest(BaseModel):
 @router.post("/ask")
 async def ask(
     request: AskRequest,
+    req: Request,
     current_user_email: str = Depends(get_current_user_email),
 ):
     # Strictly derive user_id from the authenticated JWT session (email) only.
@@ -68,6 +69,14 @@ async def ask(
 
     target_url = f"{CHATBOT_SERVICE_URL.rstrip('/')}/ask"
 
+    # Forward the Bearer authorization header to chatbot service
+    auth_header = req.headers.get("authorization")
+    forward_headers = {"Content-Type": "application/json"}
+    if auth_header:
+        forward_headers["Authorization"] = auth_header
+    else:
+        forward_headers["Authorization"] = f"Bearer {create_access_token(resolved_user_id)}"
+
     try:
         timeout = httpx.Timeout(
             connect=10.0,
@@ -80,6 +89,7 @@ async def ask(
             response = await client.post(
                 target_url,
                 json=payload,
+                headers=forward_headers,
             )
 
         if response.status_code == 200:
