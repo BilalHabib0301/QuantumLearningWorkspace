@@ -335,23 +335,6 @@ async def delete_upload(
     if not upload_doc:
         raise HTTPException(status_code=404, detail="Upload not found")
 
-<<<<<<< HEAD
-    doc_id = upload_doc.get("document_id")
-    filename = upload_doc.get("filename")
-    deleted_physical = False
-
-    if doc_id:
-        doc_file_path = os.path.join(UPLOAD_DIRECTORY, f"{doc_id}.pdf")
-        if os.path.exists(doc_file_path):
-            try:
-                os.remove(doc_file_path)
-                deleted_physical = True
-            except Exception as e:
-                logger.warning(f"Could not remove file {doc_file_path}: {e}")
-
-    if not deleted_physical and filename:
-        file_path = os.path.join(UPLOAD_DIRECTORY, filename)
-=======
     # 1. Purge vector embeddings from ChromaDB via Lambda Ingestion service
     document_id = upload_doc.get("document_id") or str(upload_doc.get("_id"))
 
@@ -378,7 +361,6 @@ async def delete_upload(
 
     for fname in possible_filenames:
         file_path = os.path.join(UPLOAD_DIRECTORY, fname)
->>>>>>> e8f8bd4 (feat(backend): call lambda vector purge API in delete_upload and add unit tests)
         if os.path.exists(file_path):
             try:
                 os.remove(file_path)
