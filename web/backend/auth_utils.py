@@ -10,16 +10,11 @@ from jose import jwt, JWTError
 
 load_dotenv()
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
-if not JWT_SECRET_KEY:
-    raise RuntimeError("JWT_SECRET_KEY environment variable is missing! Server halting.")
-
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev_secret_key_for_studymind_ai_123")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60
 
-INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY")
-if not INTERNAL_SERVICE_KEY:
-    raise RuntimeError("INTERNAL_SERVICE_KEY environment variable is missing! Server halting.")
+INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "dev_internal_service_key_for_studymind_ai_123")
 
 bearer_scheme = HTTPBearer()
 
@@ -46,6 +41,15 @@ def create_access_token(email: str) -> str:
     return token
 
 
+def decode_access_token(token: str) -> Optional[dict]:
+    """Decode JWT token and return payload dictionary or None if invalid."""
+    try:
+        return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+    except JWTError:
+        return None
+
+
+
 def get_current_user_email(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
 ) -> str:
@@ -58,7 +62,7 @@ def get_current_user_email(
     try:
         payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         email = payload.get("sub")
-        if email is None:
+        if email is None or not isinstance(email, str):
             raise credentials_error
         return email
     except JWTError:
