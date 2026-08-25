@@ -339,13 +339,14 @@ async def delete_upload(
     document_id = upload_doc.get("document_id") or str(upload_doc.get("_id"))
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            purge_url = f"{INGESTION_SERVICE_URL.rstrip('/')}/documents/{document_id}"
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                purge_url = f"{INGESTION_SERVICE_URL.rstrip('/')}/documents/{document_id}"
+            internal_token = create_access_token(email=email_clean)
             purge_res = await client.delete(
                 purge_url,
-                params={"user_id": email_clean},
+                headers={"Authorization": f"Bearer {internal_token}"},
             )
-            if purge_res.status_code not in (200, 204, 404):
+            if purge_res.status_code != 200:
                 logger.warning(
                     f"Vector purge for doc {document_id} returned status {purge_res.status_code}: {purge_res.text}"
                 )
