@@ -25,7 +25,7 @@ import uuid
 
 from fastapi import FastAPI, UploadFile, File, HTTPException, Depends
 from pydantic import BaseModel
-
+from embedding.chroma_store import delete_chunks
 from ingestion.pdf.extractor import ingest_pdf
 from ingestion.youtube.transcript import ingest_youtube
 from ingestion.web.scraper import ingest_article
@@ -132,3 +132,27 @@ async def root():
         "status": "ok",
         "service": "StudyMind AI Content Ingestion Pipeline",
     }
+
+
+# -----------------------------
+# DOCUMENT PURGE (P0-5)
+# -----------------------------
+@app.delete("/documents/{document_id}")
+async def delete_document_endpoint(
+    document_id: str,
+    user_id: str = Depends(get_current_user_id),
+):
+    """
+    [P0-5] Purge a document's chunks from the shared ChromaDB store.
+    Matches the DELETE /documents/{document_id} contract Pluto's
+    delete_upload() already calls, and reuses the same
+    chroma_store.delete_chunks() Lambda already verified working for
+    quiz_generator's own purge endpoint. Idempotent.
+
+    Note: does not verify document_id actually belongs to user_id
+    before deleting -- same ownership-check gap already flagged on
+    quiz_generator's purge endpoint. Caller (Pluto) is expected to
+    have already confirmed ownership before calling this.
+    """
+    delete_chunks(document_id)
+    return {"success": True, "message": f"Document {document_id} purged."}
