@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from models import SignupRequest, LoginRequest, Upload
 from database import get_users_collection, get_uploads_collection
 from auth_utils import hash_password, verify_password, create_access_token, get_current_user_email
+from routes.chat import router as chat_router
+from routes.flashcards import router as flashcards_router
 
 app = FastAPI(title="StudyMind AI Backend")
 
@@ -17,7 +19,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(chat_router)
+app.include_router(flashcards_router)
+
 UPLOAD_DIRECTORY = "uploaded_files"
+
 
 
 @app.get("/health")
@@ -66,6 +72,10 @@ async def upload_file(
     file: UploadFile = File(...),
     current_user_email: str = Depends(get_current_user_email),
 ):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Invalid file: filename is missing.")
+
+    os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
     file_path = os.path.join(UPLOAD_DIRECTORY, file.filename)
 
     with open(file_path, "wb") as buffer:
@@ -73,7 +83,7 @@ async def upload_file(
 
     upload_record = Upload(
         filename=file.filename,
-        file_type=file.content_type,
+        file_type=file.content_type or "application/octet-stream",
         user_id=current_user_email,
     )
 

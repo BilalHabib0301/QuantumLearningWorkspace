@@ -35,3 +35,11 @@ def get_uploads_collection():
 
 def get_users_collection():
     return get_database()["users"]
+
+def get_flashcard_reviews_collection():
+    """Return the flashcard_reviews collection for tracking user reviews."""
+    return get_database()["flashcard_reviews"]
+
+def get_flashcards_collection():
+    """Return the flashcards collection for saved/generated flashcards."""
+    return get_database()["flashcards"]

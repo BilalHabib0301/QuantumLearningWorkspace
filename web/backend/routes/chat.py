@@ -58,7 +58,8 @@ WINDOW_SECONDS = 60
 @router.post("/ask", response_model=AskResponse)
 def mock_ask(request: AskRequest, req: Request, res: Response):
     # Identify the caller: X-User-Id header, or fall back to their IP
-    user_key = req.headers.get("X-User-Id") or req.client.host
+    client_ip = req.client.host if req.client else "unknown"
+    user_key = req.headers.get("X-User-Id") or client_ip
     now = time.time()
 
     # Clean out old requests outside the time window
