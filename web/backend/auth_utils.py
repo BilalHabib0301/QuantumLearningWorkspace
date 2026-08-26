@@ -10,11 +10,16 @@ from jose import jwt, JWTError
 
 load_dotenv()
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "dev_secret_key_for_studymind_ai_123")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET_KEY:
+    raise RuntimeError("JWT_SECRET_KEY environment variable is missing! Server halting.")
+
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_MINUTES = 60
 
-INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY", "dev_internal_service_key_for_studymind_ai_123")
+INTERNAL_SERVICE_KEY = os.getenv("INTERNAL_SERVICE_KEY")
+if not INTERNAL_SERVICE_KEY:
+    raise RuntimeError("INTERNAL_SERVICE_KEY environment variable is missing! Server halting.")
 
 bearer_scheme = HTTPBearer()
 
@@ -47,7 +52,6 @@ def decode_access_token(token: str) -> Optional[dict]:
         return jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
     except JWTError:
         return None
-
 
 
 def get_current_user_email(
