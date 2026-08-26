@@ -5,9 +5,7 @@ from datetime import datetime, timezone
 from typing import Optional, List, Dict, Any
 
 from fastapi import APIRouter, HTTPException, Depends, Header, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from jose import jwt, JWTError
-
+from auth_utils import get_current_user_email
 import database
 from models import (
     Flashcard,
@@ -21,31 +19,9 @@ from models import (
 
 router = APIRouter(tags=["flashcards"])
 
-
-optional_bearer_scheme = HTTPBearer(auto_error=False)
-
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "your-secret-key-change-in-production")
-JWT_ALGORITHM = "HS256"
-
-
-def get_optional_user_email(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_bearer_scheme),
-) -> Optional[str]:
-    """Extract user email if a valid Bearer token is provided, otherwise return None."""
-    if not credentials:
-        return None
-    try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
-        email = payload.get("sub")
-        return email if isinstance(email, str) else None
-    except JWTError:
-        return None
-
-
 # ==========================================
-# Flashcard Generator Engine
+# Flashcard Generator Engine (Synthetic & Fallback)
 # ==========================================
-
 TOPIC_KNOWLEDGE_BASE: Dict[str, List[Dict[str, str]]] = {
     "quantum computing": [
         {
@@ -129,16 +105,15 @@ TOPIC_KNOWLEDGE_BASE: Dict[str, List[Dict[str, str]]] = {
     ],
 }
 
-
 def _generate_synthetic_cards(topic: str, count: int, difficulty: str, content: Optional[str] = None) -> List[Flashcard]:
     """Generate high quality topic-based flashcards."""
     normalized_topic = topic.strip().lower()
     cards: List[Flashcard] = []
     
-    # If custom content was provided, generate flashcards based on content chunks
+    # If custom content was provided
     if content and len(content.strip()) > 20:
         lines = [l.strip() for l in content.split("\n") if l.strip()]
-        for i, line in enumerate(lines[:count]):
+        for line in lines[:count]:
             card_id = str(uuid.uuid4())
             if ":" in line:
                 term, defn = line.split(":", 1)
@@ -163,7 +138,7 @@ def _generate_synthetic_cards(topic: str, count: int, difficulty: str, content: 
                 )
             )
 
-    # If predefined domain knowledge exists
+    # Predefined domain knowledge
     if len(cards) < count:
         matched_kb = None
         for key in TOPIC_KNOWLEDGE_BASE:
@@ -188,7 +163,7 @@ def _generate_synthetic_cards(topic: str, count: int, difficulty: str, content: 
                     )
                 )
 
-    # Heuristic topic concept generator for any general topic
+    # Heuristic templates fallback
     templates = [
         ("What is the primary definition and scope of {topic}?", 
          "{topic} is an essential domain focusing on core principles, methodologies, and practical applications in modern problem-solving."),
@@ -200,14 +175,8 @@ def _generate_synthetic_cards(topic: str, count: int, difficulty: str, content: 
          "In production, {topic} is leveraged to optimize performance, enhance reliability, and solve domain-specific scalability challenges."),
         ("What are the best practices for mastering and evaluating {topic}?", 
          "Best practices include active recall, structured problem sets, continuous code/concept review, and modular architecture design."),
-        ("How does {topic} compare with related contemporary paradigms?", 
-         "{topic} provides specific trade-offs between computational complexity, developer velocity, and operational maintainability."),
-        ("What is an advanced technique used in modern {topic}?", 
-         "Advanced applications involve specialized optimization algorithms, distributed architectures, and rigorous automated validation."),
-        ("Why is understanding {topic} critical for software and AI engineering?", 
-         "Mastery of {topic} enables engineers to make sound architectural decisions, debug complex failure modes, and build resilient systems."),
     ]
-
+    
     template_idx = 0
     while len(cards) < count:
         q_tpl, a_tpl = templates[template_idx % len(templates)]
@@ -229,14 +198,16 @@ def _generate_synthetic_cards(topic: str, count: int, difficulty: str, content: 
 
     return cards[:count]
 
-
 # ==========================================
 # Endpoints
 # ==========================================
 
 @router.post("/generate-flashcards", response_model=GenerateFlashcardsResponse)
 @router.post("/flashcards/generate", response_model=GenerateFlashcardsResponse)
-async def generate_flashcards(request: GenerateFlashcardsRequest):
+async def generate_flashcards(
+    request: GenerateFlashcardsRequest,
+    current_user_email: str = Depends(get_current_user_email),
+):
     """
     Topic-based flashcard generation endpoint.
     Returns generated flashcards with unique id, question/front, and answer/back.
@@ -251,22 +222,12 @@ async def generate_flashcards(request: GenerateFlashcardsRequest):
     num_cards = max(1, min(num_cards, 20))
     difficulty = request.difficulty or "medium"
 
-    # Generate flashcards
     cards = _generate_synthetic_cards(
         topic=request.topic.strip(),
         count=num_cards,
         difficulty=difficulty,
         content=request.content,
     )
-
-    # Optionally persist generated cards into flashcards collection
-    try:
-        flashcards_col = database.get_flashcards_collection()
-        if cards:
-            await flashcards_col.insert_many([c.model_dump() for c in cards])
-    except Exception:
-        # Non-blocking persistence for offline or test environments
-        pass
 
     return GenerateFlashcardsResponse(
         success=True,
@@ -275,27 +236,22 @@ async def generate_flashcards(request: GenerateFlashcardsRequest):
         cards=cards,
     )
 
-
 @router.post("/flashcards/review")
 async def review_flashcard(
     request: FlashcardReviewRequest,
-    current_user_email: Optional[str] = Depends(get_optional_user_email),
-    x_user_id: Optional[str] = Header(default=None, alias="X-User-Id"),
+    current_user_email: str = Depends(get_current_user_email),
 ):
     """
     Track flashcard review status ('known' vs 'still_learning') and save in
-    MongoDB collection 'flashcard_reviews' (user_id, flashcard_id, topic, status, date_reviewed).
+    MongoDB collection 'flashcard_reviews'.
     """
-    # Validate review status strictly
     if request.status not in ("known", "still_learning"):
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail="Invalid status. Status must be either 'known' or 'still_learning'.",
         )
 
-    # Determine user identity (Auth token > X-User-Id header > request payload > 'anonymous_user')
-    user_id = current_user_email or x_user_id or request.user_id or "anonymous_user"
-
+    user_id = current_user_email.strip().lower()
     is_weak = (request.status == "still_learning")
 
     review = FlashcardReview(
@@ -323,19 +279,15 @@ async def review_flashcard(
         "date_reviewed": review.date_reviewed.isoformat(),
     }
 
-
 @router.get("/flashcards/reviews")
 async def get_user_reviews(
     topic: Optional[str] = None,
-    user_id: Optional[str] = None,
-    current_user_email: Optional[str] = Depends(get_optional_user_email),
-    x_user_id: Optional[str] = Header(default=None, alias="X-User-Id"),
+    current_user_email: str = Depends(get_current_user_email),
 ):
-    """Fetch review history for the user, optionally filtered by topic."""
-    effective_user_id = current_user_email or x_user_id or user_id or "anonymous_user"
+    """Fetch review history for the authenticated user, optionally filtered by topic."""
+    user_id = current_user_email.strip().lower()
     reviews_col = database.get_flashcard_reviews_collection()
-
-    query: Dict[str, Any] = {"user_id": effective_user_id}
+    query: Dict[str, Any] = {"user_id": user_id}
     if topic:
         query["topic"] = topic
 
@@ -346,30 +298,26 @@ async def get_user_reviews(
         reviews_list.append(doc)
 
     return {
-        "user_id": effective_user_id,
+        "user_id": user_id,
         "total_reviews": len(reviews_list),
         "reviews": reviews_list,
     }
 
-
 @router.get("/flashcards/weak-topics", response_model=TopicReviewStatsResponse)
 async def get_weak_topics(
-    user_id: Optional[str] = None,
-    current_user_email: Optional[str] = Depends(get_optional_user_email),
-    x_user_id: Optional[str] = Header(default=None, alias="X-User-Id"),
+    current_user_email: str = Depends(get_current_user_email),
 ):
     """
     Compute weak topics based on review status ('still_learning' vs 'known')
     aligned with quiz results schema for unified weakness detection.
     """
-    effective_user_id = current_user_email or x_user_id or user_id or "anonymous_user"
+    user_id = current_user_email.strip().lower()
     reviews_col = database.get_flashcard_reviews_collection()
+    cursor = reviews_col.find({"user_id": user_id})
 
-
-    cursor = reviews_col.find({"user_id": effective_user_id})
     topic_aggregates: Dict[str, Dict[str, int]] = {}
-
     total_reviews = 0
+
     async for doc in cursor:
         total_reviews += 1
         t = doc.get("topic", "General")
@@ -389,7 +337,7 @@ async def get_weak_topics(
         k = stats["known"]
         sl = stats["still_learning"]
         mastery = round(k / tot, 2) if tot > 0 else 0.0
-        # Aligned weakness criteria: flagged if still_learning exceeds known or mastery below 60%
+        
         is_weak = (sl > k) or (tot >= 2 and mastery < 0.6)
 
         weak_topics_list.append(
@@ -403,11 +351,10 @@ async def get_weak_topics(
             )
         )
 
-    # Sort so weakest topics (lowest mastery score) appear first
     weak_topics_list.sort(key=lambda x: (not x.is_weak, x.mastery_score))
 
     return TopicReviewStatsResponse(
-        user_id=effective_user_id,
+        user_id=user_id,
         weak_topics=weak_topics_list,
         total_reviews=total_reviews,
     )
