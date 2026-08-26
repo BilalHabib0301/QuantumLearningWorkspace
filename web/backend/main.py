@@ -9,6 +9,7 @@ from bson import ObjectId
 from fastapi import FastAPI, HTTPException, Header, UploadFile, File, Depends, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from pypdf import PdfReader
+import httpx
 
 from models import (
     SignupRequest,
@@ -35,7 +36,7 @@ from auth_utils import (
 from routes.chat import router as chat_router
 from routes.oauth import router as oauth_router
 from routes.quiz import router as quiz_router
-import httpx
+from routes.flashcards import router as flashcards_router
 
 logger = logging.getLogger("uvicorn")
 
@@ -64,6 +65,7 @@ app.add_middleware(
 app.include_router(chat_router)
 app.include_router(oauth_router)
 app.include_router(quiz_router)
+app.include_router(flashcards_router)
 
 
 UPLOAD_DIRECTORY = os.getenv(
@@ -72,7 +74,8 @@ UPLOAD_DIRECTORY = os.getenv(
 )
 INGESTION_SERVICE_URL = os.getenv("INGESTION_SERVICE_URL", "http://localhost:8001")
 
-async def process_file_ingestion(file_id, document_id: str, filename: str, user_id: str):
+
+async def process_file_ingestion(file_id: Any, document_id: str, filename: str, user_id: str):
     """Forward the uploaded file to the ingestion service for chunking + embedding and persist results."""
     uploads = get_uploads_collection()
 
@@ -236,8 +239,11 @@ async def upload_file(
     file: UploadFile = File(...),
     current_user_email: str = Depends(get_current_user_email),
 ):
+    if not file.filename:
+        raise HTTPException(status_code=400, detail="Invalid file: filename is missing.")
+
     os.makedirs(UPLOAD_DIRECTORY, exist_ok=True)
-    filename = file.filename or "uploaded_file.pdf"
+    filename = file.filename
     document_id = str(uuid.uuid4())
     physical_filename = f"{document_id}.pdf"
     file_path = os.path.join(UPLOAD_DIRECTORY, physical_filename)
@@ -316,7 +322,7 @@ async def delete_upload(
     email_clean = current_user_email.strip().lower()
 
     try:
-        search_query = {"_id": ObjectId(upload_id), "user_id": email_clean}
+        search_query: Dict[str, Any] = {"_id": ObjectId(upload_id), "user_id": email_clean}
     except Exception:
         search_query = {"_id": upload_id, "user_id": email_clean}
 
@@ -339,12 +345,13 @@ async def delete_upload(
     document_id = upload_doc.get("document_id") or str(upload_doc.get("_id"))
 
     try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                purge_url = f"{INGESTION_SERVICE_URL.rstrip('/')}/documents/{document_id}"
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            purge_url = f"{INGESTION_SERVICE_URL.rstrip('/')}/documents/{document_id}"
             internal_token = create_access_token(email=email_clean)
             purge_res = await client.delete(
                 purge_url,
                 headers={"Authorization": f"Bearer {internal_token}"},
+                params={"user_id": email_clean},
             )
             if purge_res.status_code != 200:
                 logger.warning(
@@ -372,6 +379,7 @@ async def delete_upload(
     await uploads.delete_one(search_query)
     return {"message": "Upload and vector embeddings deleted successfully"}
 
+
 @app.get("/uploads/{upload_id}/preview")
 async def get_document_preview(
     upload_id: str,
@@ -381,7 +389,7 @@ async def get_document_preview(
     email_clean = current_user_email.strip().lower()
 
     try:
-        search_query = {"_id": ObjectId(upload_id), "user_id": email_clean}
+        search_query: Dict[str, Any] = {"_id": ObjectId(upload_id), "user_id": email_clean}
     except Exception:
         search_query = {"_id": upload_id, "user_id": email_clean}
 
@@ -560,7 +568,7 @@ async def get_quiz_results(current_user_email: str = Depends(get_current_user_em
 @app.get("/quiz-results/{user_id}")
 async def get_quiz_results_by_user_id(
     user_id: str,
-    x_internal_key: str = Header(None),
+    x_internal_key: Optional[str] = Header(default=None),
 ):
     """Return quiz history for a specific user (internal service access only)."""
     verify_internal_service_key(x_internal_key)

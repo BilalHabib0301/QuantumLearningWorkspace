@@ -16,7 +16,12 @@ def override_get_current_user_email():
     return TEST_USER_EMAIL
 
 
-app.dependency_overrides[get_current_user_email] = override_get_current_user_email
+@pytest.fixture(autouse=True)
+def override_auth_dependency():
+    app.dependency_overrides[get_current_user_email] = override_get_current_user_email
+    yield
+    app.dependency_overrides.pop(get_current_user_email, None)
+
 
 
 @pytest.mark.asyncio
