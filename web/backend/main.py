@@ -95,11 +95,13 @@ async def process_file_ingestion(file_id: Any, document_id: str, filename: str, 
                 file_bytes = f.read()
 
             async with httpx.AsyncClient(timeout=15) as client:
+                internal_token = create_access_token(email=user_id)
                 response = await client.post(
                     f"{INGESTION_SERVICE_URL.rstrip('/')}/ingest/pdf",
                     files={"file": (filename, file_bytes, "application/pdf")},
-                    data={"user_id": user_id},
+                    headers={"Authorization": f"Bearer {internal_token}"},
                 )
+
             if response.status_code == 200:
                 try:
                     data = response.json()
@@ -109,11 +111,18 @@ async def process_file_ingestion(file_id: Any, document_id: str, filename: str, 
                 except Exception:
                     new_status = "Ready"
             else:
-                logger.warning(f"Ingestion service responded with {response.status_code}: {response.text}")
+                logger.warning(
+                    f"Ingestion service responded with {response.status_code}: {response.text}"
+                )
                 new_status = "Failed"
-                last_error = f"Ingestion failed ({response.status_code}): {response.text}"
+                last_error = (
+                    f"Ingestion failed ({response.status_code}): {response.text}"
+                )
+
         except Exception as e:
-            logger.warning(f"Ingestion error for {filename} ({document_id}): {e}")
+            logger.warning(
+                f"Ingestion error for {filename} ({document_id}): {e}"
+            )
             new_status = "Failed"
             last_error = str(e)
     else:
