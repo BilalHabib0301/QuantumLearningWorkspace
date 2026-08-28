@@ -92,7 +92,7 @@ function TopBar({ activeTab }) {
       subtitle: "Ask questions about your uploaded study materials",
     },
     flashcards: {
-      title: "Interactive Flashcards",
+      title: "AI Flashcards",
       subtitle: "Active recall study cards to test and reinforce your knowledge",
     },
     quiz: {
