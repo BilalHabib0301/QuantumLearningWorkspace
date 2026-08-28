@@ -79,7 +79,7 @@
 
 .modal-file-title {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 14px;
   padding: 14px;
   background: var(--color-surface-hover);
@@ -90,16 +90,16 @@
 
 .modal-file-icon {
   font-size: 1.6rem;
+  line-height: 1.2;
 }
 
 .modal-filename {
   color: var(--color-text-primary);
   font-weight: 600;
   margin: 0 0 4px 0;
-  max-width: 380px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  line-height: 1.4;
 }
 
 .modal-type-badge {
