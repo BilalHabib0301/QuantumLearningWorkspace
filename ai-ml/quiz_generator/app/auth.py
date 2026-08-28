@@ -16,9 +16,13 @@ adding here too).
 """
 
 import os
+from pathlib import Path
 
 import jwt
+from dotenv import load_dotenv
 from fastapi import Header, HTTPException
+
+load_dotenv(dotenv_path=Path(__file__).resolve().parent.parent.parent / ".env")
 
 JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "")
 JWT_ALGORITHM = "HS256"
