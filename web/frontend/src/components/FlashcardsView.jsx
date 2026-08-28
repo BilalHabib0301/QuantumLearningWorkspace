@@ -255,7 +255,7 @@ export default function FlashcardsView() {
         <div className="flashcards-setup-header">
           <div className="flashcards-setup-icon">🎴</div>
           <div>
-            <h2 className="flashcards-setup-title">Interactive Flashcards</h2>
+            <h2 className="flashcards-setup-title">Create Flashcards</h2>
             <p className="flashcards-setup-subtitle">
               Select or type any topic to generate active recall study cards
             </p>
@@ -311,9 +311,7 @@ export default function FlashcardsView() {
                     Generating...
                   </>
                 ) : (
-                  <>
-                    <span>✨</span> Generate Flashcards
-                  </>
+                  "Generate Flashcards"
                 )}
               </button>
             </div>
