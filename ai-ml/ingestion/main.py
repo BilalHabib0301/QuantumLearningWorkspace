@@ -18,6 +18,7 @@ caller can never claim to be another user. This closes the gap
 identified in NV-2: previously these endpoints had no authentication
 at all, unlike quiz_generator's endpoints, which were already correct.
 """
+from __future__ import annotations
 import shutil
 import tempfile
 import os
