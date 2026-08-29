@@ -9,7 +9,13 @@ load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
-GROQ_MODEL = "llama-3.3-70b-versatile"
+GROQ_MODEL = "openai/gpt-oss-120b"
+# NOTE: llama-3.3-70b-versatile has been deprecated by Groq and no
+# longer resolves (404 model_not_found). openai/gpt-oss-120b is
+# Groq's current recommended general-purpose/reasoning replacement
+# as of this writing. This was silently breaking all live quiz
+# generation (MCQ, true/false, fill-blank, short-answer all share
+# this config) until fixed.
 
 
 # ==========================================
