@@ -5,6 +5,7 @@ import uuid
 import logging
 from datetime import datetime, timezone
 from typing import Optional, Dict, Any, List
+from auth_utils import get_current_user_email, create_access_token
 
 import httpx
 from fastapi import APIRouter, HTTPException, Request, Depends, Header
@@ -38,17 +39,23 @@ async def generate_quiz_proxy(
     and filters out answers so the frontend receives ONLY questions without answers.
     """
     # Extract user ID if available from auth header or request
+   # Extract user ID if available from auth header or request
     auth_header = req.headers.get("Authorization", "")
     user_id = "anonymous"
     if auth_header.startswith("Bearer "):
         try:
             from auth_utils import decode_access_token
             token = auth_header.split(" ")[1]
-            payload = decode_access_token(token)
-            if payload and "sub" in payload:
-                user_id = payload["sub"]
+            payload_token = decode_access_token(token)
+            if payload_token and "sub" in payload_token:
+                user_id = payload_token["sub"]
         except Exception:
             pass
+
+    # Ensure internal token is attached for the AI Quiz Generator service
+    forward_headers = {
+        "Authorization": f"Bearer {create_access_token(user_id)}"
+    }
 
     target_url = f"{QUIZ_SERVICE_URL.rstrip('/')}/generate-quiz"
     payload = {
@@ -66,7 +73,7 @@ async def generate_quiz_proxy(
         )
 
         async with httpx.AsyncClient(timeout=timeout) as client:
-            response = await client.post(target_url, json=payload)
+            response = await client.post(target_url, json=payload, headers=forward_headers)
 
         if response.status_code == 200:
             data = response.json()
