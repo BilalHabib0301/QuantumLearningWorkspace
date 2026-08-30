@@ -4,6 +4,7 @@ import { useToast } from "../context/ToastContext.jsx";
 import ProfileView from "./ProfileView.jsx";
 import QuizView from "./QuizView.jsx";
 import QuizResultsView from "./QuizResultsView.jsx";
+import FlashcardsView from "./FlashcardsView.jsx";
 import LogoutModal from "./LogoutModal.jsx";
 import ThemeToggle from "./ThemeToggle.jsx";
 import "./Dashboard.css";
@@ -18,6 +19,7 @@ function SidebarNav({ activeTab, setActiveTab, onRequestLogout }) {
   const navItems = [
     { id: "documents", icon: "📄", label: "Documents" },
     { id: "chat", icon: "💬", label: "AI Chat" },
+    { id: "flashcards", icon: "🎴", label: "Flashcards" },
     { id: "quiz", icon: "🎯", label: "Quiz" },
     { id: "results", icon: "📊", label: "Results" },
     { id: "graph", icon: "🗺️", label: "Knowledge Graph" },
@@ -88,6 +90,10 @@ function TopBar({ activeTab }) {
     chat: {
       title: "AI Assistant",
       subtitle: "Ask questions about your uploaded study materials",
+    },
+    flashcards: {
+      title: "AI Flashcards",
+      subtitle: "Active recall study cards to test and reinforce your knowledge",
     },
     quiz: {
       title: "Quiz",
@@ -987,6 +993,7 @@ export default function Dashboard() {
               setTargetDocument={setTargetDocument}
             />
           )}
+          {activeTab === "flashcards" && <FlashcardsView />}
           {activeTab === "quiz" && <QuizView />}
           {activeTab === "results" && <QuizResultsView />}
           {activeTab === "graph" && <GraphView />}

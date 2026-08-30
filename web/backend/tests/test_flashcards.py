@@ -78,12 +78,13 @@ def auth_headers():
 # ==========================================
 
 @pytest.mark.asyncio
-async def test_generate_flashcards_default():
+async def test_generate_flashcards_default(auth_headers):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/generate-flashcards",
             json={"topic": "Quantum Computing", "num_cards": 4},
+            headers=auth_headers,
         )
         assert response.status_code == 200
         data = response.json()
@@ -103,13 +104,14 @@ async def test_generate_flashcards_default():
 
 
 @pytest.mark.asyncio
-async def test_generate_flashcards_with_content():
+async def test_generate_flashcards_with_content(auth_headers):
     content = "Superposition: A quantum state existing simultaneously.\nEntanglement: Instantaneous correlation between particles."
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/generate-flashcards",
             json={"topic": "Quantum Physics", "num_cards": 2, "content": content},
+            headers=auth_headers,
         )
         assert response.status_code == 200
         data = response.json()
@@ -118,23 +120,25 @@ async def test_generate_flashcards_with_content():
 
 
 @pytest.mark.asyncio
-async def test_generate_flashcards_empty_topic_validation():
+async def test_generate_flashcards_empty_topic_validation(auth_headers):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/generate-flashcards",
             json={"topic": "   "},
+            headers=auth_headers,
         )
         assert response.status_code in (400, 422)
 
 
 @pytest.mark.asyncio
-async def test_generate_flashcards_card_id_uniqueness():
+async def test_generate_flashcards_card_id_uniqueness(auth_headers):
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
         response = await client.post(
             "/generate-flashcards",
             json={"topic": "Machine Learning", "num_cards": 5},
+            headers=auth_headers,
         )
         assert response.status_code == 200
         cards = response.json()["cards"]

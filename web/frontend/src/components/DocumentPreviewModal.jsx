@@ -65,7 +65,7 @@ export default function DocumentPreviewModal({ uploadId, onClose }) {
             <>
               <div className="modal-file-title">
                 <span className="modal-file-icon">📄</span>
-                <div>
+                <div style={{ minWidth: 0, flex: 1 }}>
                   <p className="modal-filename" title={preview.filename}>
                     {preview.filename}
                   </p>

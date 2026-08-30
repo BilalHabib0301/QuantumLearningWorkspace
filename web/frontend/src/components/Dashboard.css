@@ -1399,14 +1399,21 @@
     flex-direction: row;
     width: 100%;
     min-width: 100%;
-    height: 62px;
-    padding: 0 16px;
-    justify-content: space-around;
+    height: 58px;
+    padding: 0 8px;
+    justify-content: space-between;
     align-items: center;
     border-right: none;
     border-top: 1px solid rgba(42, 42, 62, 0.6);
     background: #0d0d1a;
     z-index: 100;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+  }
+
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .sidebar-logo-area {
@@ -1415,7 +1422,7 @@
 
   .sidebar-nav-items {
     flex-direction: row;
-    gap: 18px;
+    gap: 6px;
     margin-top: 0;
     align-items: center;
   }
@@ -1423,26 +1430,49 @@
   .sidebar-bottom {
     flex-direction: row;
     margin-top: 0;
-    gap: 12px;
+    gap: 6px;
     align-items: center;
+    margin-left: 4px;
+    padding-left: 4px;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
   }
 
   .nav-btn {
-    width: 42px;
-    height: 42px;
+    width: 36px;
+    height: 36px;
+    flex-shrink: 0;
+  }
+
+  .user-avatar-circle {
+    width: 30px;
+    height: 30px;
+    font-size: 0.78rem;
+    flex-shrink: 0;
+  }
+
+  .logout-icon-btn {
+    width: 30px;
+    height: 30px;
+    padding: 4px;
+    flex-shrink: 0;
+  }
+
+  .nav-tooltip {
+    display: none !important;
   }
 
   .nav-indicator {
     left: auto;
     bottom: 0;
     top: auto;
-    width: 22px;
+    width: 18px;
     height: 3px;
     border-radius: 3px 3px 0 0;
   }
 
   .top-bar {
-    padding: 12px 18px;
+    padding: 10px 14px;
+    gap: 8px;
   }
 
   .top-bar-title {
@@ -1450,12 +1480,12 @@
   }
 
   .page-content {
-    padding: 14px;
+    padding: 12px;
     overflow-y: auto;
   }
 
   .upload-card {
-    padding: 18px;
+    padding: 16px;
   }
 
   .upload-row {
@@ -1464,21 +1494,113 @@
   }
 
   .file-list-card {
-    padding: 16px;
+    padding: 14px;
   }
 
+  /* File Row Mobile Card Layout */
   .file-row {
-    grid-template-columns: 32px 1fr auto;
-    gap: 8px;
-    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 36px 1fr auto;
+    grid-template-rows: auto auto auto;
+    gap: 8px 10px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    align-items: center;
+  }
+
+  .file-icon-box {
+    grid-column: 1;
+    grid-row: 1;
+    width: 36px;
+    height: 36px;
+  }
+
+  .file-info {
+    grid-column: 2;
+    grid-row: 1;
+    min-width: 0;
+  }
+
+  .btn-preview-file {
+    grid-column: 3;
+    grid-row: 1;
+    width: 34px;
+    height: 34px;
+    padding: 6px;
+    justify-self: end;
   }
 
   .file-date-text {
-    display: none;
+    display: block;
+    grid-column: 1 / 3;
+    grid-row: 2;
+    font-size: 0.76rem;
+    color: var(--color-text-muted);
   }
 
   .status-pill {
-    display: none;
+    display: inline-flex;
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: end;
+    padding: 2px 8px;
+    font-size: 0.72rem;
+  }
+
+  .btn-ask-doc {
+    grid-column: 1 / 3;
+    grid-row: 3;
+    width: 100%;
+    height: 36px;
+    font-size: 0.85rem;
+    justify-content: center;
+  }
+
+  .btn-delete-file {
+    grid-column: 3;
+    grid-row: 3;
+    width: 36px;
+    height: 36px;
+    justify-self: end;
+  }
+
+  .chat-header-bar {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .chat-doc-selector-container {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .selector-icon {
+    white-space: nowrap;
+    font-size: 0.8rem;
+    flex-shrink: 0;
+  }
+
+  .chat-doc-select {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    font-size: 0.8rem;
+    padding: 6px 10px;
+  }
+
+  .chat-header-right {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    padding-top: 4px;
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
   }
 
   .msg-bubble {
@@ -1503,12 +1625,24 @@
 }
 
 @media (max-width: 480px) {
-  .top-bar-user {
+  .user-email {
     display: none;
   }
 
+  .user-profile-btn {
+    padding: 4px 6px;
+  }
+
+  .top-bar {
+    padding: 10px 12px;
+  }
+
   .top-bar-title {
-    font-size: 1.05rem;
+    font-size: 1.1rem;
+  }
+
+  .top-bar-subtitle {
+    font-size: 0.74rem;
   }
 
   .msg-bubble {
